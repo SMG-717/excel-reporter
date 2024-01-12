@@ -1,0 +1,8 @@
+{
+    "java.project.referencedLibraries": {
+        "include": [
+            "c:\\Dev\\emulator\\out\\emulator.jar",
+            "lib/**/*.jar"
+        ],
+    },
+}

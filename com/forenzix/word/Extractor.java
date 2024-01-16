@@ -18,12 +18,9 @@ import org.apache.poi.xwpf.usermodel.XWPFTableRow;
 
 import com.mendix.core.Core;
 
-public class Extractor {
-    
-    // No object instances for you!
-    private Extractor() {
-        throw new UnsupportedOperationException("You shall not pass!");
-    }
+public abstract class Extractor {
+
+	abstract <R> List<R> generateReplacers(XWPFDocument doc);
 
     /*
     // Mendix Specific Code

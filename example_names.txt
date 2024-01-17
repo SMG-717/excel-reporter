@@ -1,104 +1,66 @@
-[
-    { "Assessor" : "Home!$E$6" }, 
-    { "BAddCell" : "Home!$C$20" }, 
-    { "BClaimCol" : "Bills!$X:$X" }, 
-    { "BConsumeCol" : "Bills!$G:$L" }, 
-    { "BCRowCol" : "Bills!$P:$P" }, 
-    { "BCUtilCol" : "Bills!$S:$S" }, 
-    { "BDateCol" : "Bills!$D$6" }, 
-    { "BEndCol" : "Bills!$F:$F" }, 
-    { "BErrorCol" : "Bills!$V$6" }, 
-    { "BillAfter" : "Bills!$1063:$1063" }, 
-    { "BillBanner" : "Bills!$B$2" }, 
-    { "BillHead" : "Bills!$7:$7" }, 
-    { "BNameCell" : "Home!$C$19" }, 
-    { "BNumCell" : "Home!$E$19" }, 
-    { "BNumCol" : "Bills!$C$6" }, 
-    { "BPaymentCol" : "Bills!$N$6" }, 
-    { "BPeriodCol" : "Bills!$R:$R" }, 
-    { "BRescCol" : "Bills!$W:$W" }, 
-    { "BRowCol" : "Bills!$O:$O" }, 
-    { "BSiteCol" : "Bills!$B$6" }, 
-    { "BStartCol" : "Bills!$E$6" }, 
-    { "BStatCol" : "Bills!$Y:$Y" }, 
-    { "BStatusCell" : "Home!$E$20" }, 
-    { "BTConsumeCol" : "Bills!$M:$M" }, 
-    { "BUtilityCol" : "Bills!$S$6" }, 
-    { "CActUseCol" : "Contracts!$AD$4" }, 
-    { "CAddCell" : "Home!$C$12" }, 
-    { "CaseID" : "Home!$C$4" }, 
-    { "CBaseCol" : "Contracts!$W$4" }, 
-    { "CBill1Col" : "Contracts!$K$5" }, 
-    { "CBill2Col" : "Contracts!$M$5" }, 
-    { "CCEndCol" : "Contracts!$G$4" }, 
-    { "CClaim1Col" : "Contracts!$AB$4" }, 
-    { "CClaim2Col" : "Contracts!$AH$4" }, 
-    { "CCLDateList" : "Table5[Start Date]" }, 
-    { "CEAC1Col" : "Contracts!$J$5" }, 
-    { "CEAC2Col" : "Contracts!$L$5" }, 
-    { "CEndCol" : "Contracts!$Y$4" }, 
-    { "CEstUseCol" : "Contracts!$AC$4" }, 
-    { "ClaimDate" : "Home!$C$6" }, 
-    { "CLengthCol" : "Contracts!$X$4" }, 
-    { "CNameCell" : "Home!$C$11" }, 
-    { "CNumCell" : "Home!$E$11" }, 
-    { "ComRate" : "Home!$C$7" }, 
-    { "ContAfter" : "Contracts!$110:$110" }, 
-    { "ContBanner" : "Contracts!$B$2" }, 
-    { "ContHead" : "Contracts!$5:$5" }, 
-    { "CoStatusList" : "Table1[Company Status]" }, 
-    { "CPeakCol" : "Contracts!$V$4" }, 
-    { "CRate2Col" : "Contracts!$AE$4" }, 
-    { "CSignCol" : "Contracts!$E$4" }, 
-    { "CSiteCol" : "Contracts!$B$4" }, 
-    { "CStandCol" : "Contracts!$I$4" }, 
-    { "CStartCol" : "Contracts!$F$4" }, 
-    { "CStat1Col" : "Contracts!$AA$4" }, 
-    { "CStat2Col" : "Contracts!$AG$4" }, 
-    { "CStatusCell" : "Home!$E$12" }, 
-    { "CTermCol" : "Contracts!$H$4" }, 
-    { "CTypeCol" : "Contracts!$D$4" }, 
-    { "CTypeList" : "Table4[Standing Charge Type]" }, 
-    { "CUsage1Col" : "Contracts!$Z$4" }, 
-    { "CUsage2Col" : "Contracts!$AF$4" }, 
-    { "CUtilCol" : "Contracts!$C$5" }, 
-    { "ECCLHead" : "Table5[[#Headers],[Elec CCL (p/kWh)]]" }, 
-    { "ECCLLimit" : "Lists!$A$5" }, 
-    { "FlexAfter" : "Contracts!$137:$137" }, 
-    { "FlexSigned" : "Contracts!$E$111" }, 
-    { "FlexSite" : "Contracts!$B$111" }, 
-    { "FlexType" : "Contracts!$D$111" }, 
-    { "FlexUtil" : "Contracts!$C$111" }, 
-    { "GCCLHead" : "Table5[[#Headers],[Gas CCL (p/kWh)]]" }, 
-    { "GCCLLimit" : "Lists!$A$8" }, 
-    { "LeadList" : "Table3[Lead Provider]" }, 
-    { "LeadProv" : "Home!$E$4" }, 
-    { "M1DiscCell" : "Home!$C$91" }, 
-    { "M1StatCell" : "Home!$C$92" }, 
-    { "M1TotCell" : "Home!$C$94" }, 
-    { "M2DiscCell" : "Home!#REF!" }, 
-    { "M2StatCell" : "Home!$E$91" }, 
-    { "M2TotCell" : "Home!$E$92" }, 
-    { "_xlnm.Print_Area" : "Bills!$B$2:$Y$1063" }, 
-    { "_xlnm.Print_Area" : "Contracts!$B$2:$AH$110" }, 
-    { "_xlnm.Print_Titles" : "Bills!$2:$7" }, 
-    { "_xlnm.Print_Titles" : "Contracts!$2:$5" }, 
-    { "RepConsumeCell" : "Lists!$O$1" }, 
-    { "SAccCol" : "Home!$D$25" }, 
-    { "SAddCell" : "Home!$C$16" }, 
-    { "SAddCol" : "Home!$C$25" }, 
-    { "SiteAfter" : "Home!$87:$87" }, 
-    { "SiteDetails" : "Home!$B$25:$F$27" }, 
-    { "SiteList" : "Home!$B$26:$B$27" }, 
-    { "SiteLookup" : "Home!$B$25:$F$86" }, 
-    { "SMeterCol" : "Home!$F$25" }, 
-    { "SMPANCol" : "Home!$E$25" }, 
-    { "SNameCell" : "Home!$C$15" }, 
-    { "SNameCol" : "Home!$B$25" }, 
-    { "SNumCell" : "Home!$E$15" }, 
-    { "SStatusCell" : "Home!$E$16" }, 
-    { "StatRate" : "Home!$E$7" }, 
-    { "StatVATDay" : "Lists!$A$2" }, 
-    { "StatVAVTDay" : "Lists!$A$2" }, 
-    { "UtilityList" : "Table2[Utility Type]" }
-]
+<< # Contract Setup
+
+i = 0;
+looking = true;
+periods = 1
+CN_row = 0;
+
+let CN_drates = "";
+let CN_nrates = "";
+let CN_erates = "";
+let CN_wrates = "";
+let CN_startDate = empty;
+let CN_tempStartDate = empty;
+
+while (looking) {
+    i = i + 1;
+    let doubleSiteHeader = row.cSiteHeader + i;
+    let prefix = "R" + int.doubleSiteHeader + "C";
+    let siteCell = prefix + col.cSiteHeader;
+    if (f.siteCell == "" and str.siteCell != "" and str.siteCell != empty) {
+        # New contract row
+        CN_row = CN_row + 1;
+    }
+
+    if (CN_row == CN_Ord) {
+        let sdateCell = prefix + col.CStartCol;
+        CN_tempStartDate = Contracts.sdateCell;
+
+        let dayRateCell = prefix + col.CBill1Col;       
+        let nayRateCell = prefix + col.CBill12ol; 
+        # let eayRateCell = prefix + (col.CBill1Col + 4); 
+        # let wayRateCell = prefix + (col.CBill1Col + 6);
+
+        if (periods > 1) { 
+            if (periods == 2) { 
+                CN_nrates = CN_nrates + " (from " + date.CN_startDate + ")\n"; 
+                CN_drates = CN_drates + " (from " + date.CN_startDate + ")\n"; 
+                # CN_erates = CN_erates + "(from " + date.CN_startDate + ")\n"; 
+                # CN_wrates = CN_wrates + "(from " + date.CN_startDate + ")\n"; 
+            }
+            CN_nrates = CN_nrates + " (from " + date.CN_tempStartDate + ")\n"; 
+            CN_drates = CN_drates + " (from " + date.CN_tempStartDate + ")\n"; 
+            # CN_erates = CN_erates + "(from " + date.CN_tempStartDate + ")\n"; 
+            # CN_wrates = CN_wrates + "(from " + date.CN_tempStartDate + ")\n"; 
+        }
+        else {
+            CN_drates = CN_drates + Contracts.dayRateCell;
+            CN_nrates = CN_nrates + Contracts.nayRateCell;
+            # CN_erates = CN_erates + Contracts.eayRateCell;
+            # CN_wrates = CN_wrates + Contracts.wayRateCell;
+            CN_startDate = CN_tempStartDate;
+        }
+
+        periods = periods + 1
+    }
+    else if (CN_row == CN_Ord + 1) {
+        looking = false;
+    }
+}
+
+# After the while loop is completed the following fields are filled:
+# - i holds the sheet row of our contract
+# - CN_row contains our contract number
+# - periods contains the number of different rate period in the contract
+
+"";>>

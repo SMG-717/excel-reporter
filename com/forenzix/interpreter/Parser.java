@@ -393,8 +393,9 @@ class NodeScope {
         this.statements = List.copyOf(statements);
     }
 
+    @Override
     public String toString() {
-        return "Scope: { " + String.join(", ", statements.stream().map(x -> x.toString()).collect(Collectors.toList())) + " }";
+        return "{ " + String.join("; ", statements.stream().map(x -> x.toString()).collect(Collectors.toList())) + " }";
     }
 }
 
@@ -413,10 +414,12 @@ abstract class NodeStatement {
             this.fail = fail;
         }
         
+        @Override
         public Object host(Visitor visitor) { return visitor.visit(this); }
 
+        @Override
         public String toString() {
-            return "StmtIf: if " + expression + " then " + success + " else " + fail + " }";
+            return "if (" + expression.toString() + ") " + success.toString() + " else " + fail.toString();
         } 
     }
 
@@ -430,10 +433,12 @@ abstract class NodeStatement {
             this.scope = scope;
         }
         
+        @Override
         public Object host(Visitor visitor) { return visitor.visit(this); }
 
+        @Override
         public String toString() {
-            return "StmtWhile: while " + expression + " do " + scope + " }";
+            return "while (" + expression.toString() + ") " + scope.toString();
         } 
     }
 
@@ -445,10 +450,12 @@ abstract class NodeStatement {
             this.scope = scope;
         }
         
+        @Override
         public Object host(Visitor visitor) { return visitor.visit(this); }
 
+        @Override
         public String toString() {
-            return "StmtScope: " + scope + " }";
+            return scope.toString();
         } 
     }
 
@@ -462,10 +469,12 @@ abstract class NodeStatement {
             this.expression = expression;
         }
         
+        @Override
         public Object host(Visitor visitor) { return visitor.visit(this); }
 
+        @Override
         public String toString() {
-            return "StmtDeclare: { " + qualifier + "=" + expression + " }";
+            return "let " + qualifier.name + " = " + expression.toString();
         } 
     }
     
@@ -479,10 +488,12 @@ abstract class NodeStatement {
             this.expression = expression;
         }
         
+        @Override
         public Object host(Visitor visitor) { return visitor.visit(this); }
 
+        @Override
         public String toString() {
-            return "StmtAssign: { " + qualifier + "=" + expression + " }";
+            return qualifier.name + " = " + expression.toString();
         } 
     }
 
@@ -498,10 +509,12 @@ abstract class NodeStatement {
             this.member = member;
         }
         
+        @Override
         public Object host(Visitor visitor) { return visitor.visit(this); }
 
+        @Override
         public String toString() {
-            return "MemberAssign: { " + qualifier + "=" + expression + " }";
+            return qualifier.name + "." + member.name + " = " + expression.toString();
         } 
     }
 
@@ -513,10 +526,12 @@ abstract class NodeStatement {
             this.expression = expression;
         }
         
+        @Override
         public Object host(Visitor visitor) { return visitor.visit(this); }
 
+        @Override
         public String toString() {
-            return "StmtExp: { " + expression + " }";
+            return expression.toString();
         } 
     }
 
@@ -532,15 +547,24 @@ abstract class NodeStatement {
     }
 }
 
-enum BinaryOperator {                               // Precedence
-    Exponent,                                       // 8
-    Multiply, Divide, Modulo,                       // 7
-    Add, Subtract,                                  // 6
-    ShiftLeft, ShiftRight,                          // 5
-    Less, LessEqual, Greater, GreaterEqual,         // 4
-    Equal, NotEqual,                                // 3
-    BitAnd, BitOr, BitXor,                          // 2
-    And, Or                                         // 1
+enum BinaryOperator {                                             // Precedence
+    Exponent("**"),                                               // 8
+    Multiply("*"), Divide("/"), Modulo("%"),                      // 7
+    Add("+"), Subtract("-"),                                      // 6
+    ShiftLeft("<<"), ShiftRight(">>"),                            // 5
+    Less("<"), LessEqual("<="), Greater(">"), GreaterEqual(">="), // 4
+    Equal("=="), NotEqual("!="),                                  // 3
+    BitAnd("&"), BitOr("|"), BitXor("^"),                         // 2
+    And("and"), Or("or");                                         // 1
+    
+    private final String symbol;
+    private BinaryOperator(String symbol) {
+        this.symbol = symbol;
+    }
+
+    public String toString() {
+        return symbol;
+    }
 }
 
 enum UnaryOperator {
@@ -558,10 +582,12 @@ interface NodeExpression {
             this.rhs = rhs;
         }
 
+        @Override
         public <R> R host(Visitor<R> visitor) { return visitor.visit(this); }
 
+        @Override
         public String toString() {
-            return "ExprBin: { " + lhs + " " + op + " " + rhs + " }";
+            return lhs.toString() + " " + op.toString() + " " + rhs.toString();
         } 
     }
     
@@ -574,12 +600,14 @@ interface NodeExpression {
             this.val = val;
         }
 
+        @Override
         public <R> R host(Visitor<R> visitor) {
             return visitor.visit(this);
         }
         
+        @Override
         public String toString() {
-            return "ExprUn: { " + op + " " + val + " }";
+            return op.toString() + val.toString();
         } 
     }
     
@@ -590,12 +618,14 @@ interface NodeExpression {
             this.val = val;
         }
 
+        @Override
         public <R> R host(Visitor<R> visitor) {
             return visitor.visit(this);
         }
         
+        @Override
         public String toString() {
-            return "ExprTerm: { " + val + " }";
+            return val.toString();
         } 
     }
 
@@ -614,12 +644,14 @@ interface NodeTerm {
             this.lit = lit;
         }
         
+        @Override
         public Object host(Visitor visitor) {
             return visitor.visit(this);
         }
 
+        @Override
         public String toString() {
-            return "TermLit: { " + lit + " }";
+            return String.valueOf(lit);
         } 
     }
     
@@ -634,8 +666,9 @@ interface NodeTerm {
             return visitor.visit(this);
         }
         
+        @Override
         public String toString() {
-            return "TermVar: { " + var + " }";
+            return var.name;
         } 
     }
     
@@ -652,8 +685,9 @@ interface NodeTerm {
             return visitor.visit(this);
         }
         
+        @Override
         public String toString() {
-            return "TermMAccess: { " + object + " }";
+            return object.name + "." + member.name;
         } 
     }
 
@@ -672,7 +706,8 @@ class NodeVariable {
         this.name = name;
     }
 
+    @Override
     public String toString() {
-        return "Var: " + this.name;
+        return this.name;
     }
 }

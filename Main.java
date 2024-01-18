@@ -1,6 +1,8 @@
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.NumberFormat;
@@ -11,6 +13,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.io.input.InfiniteCircularInputStream;
+import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.util.CellReference;
 import org.apache.poi.xssf.usermodel.XSSFCell;
@@ -19,7 +23,6 @@ import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
-import org.openxmlformats.schemas.spreadsheetml.x2006.main.CTCellFormula;
 
 import com.forenzix.common.Pair;
 import com.forenzix.common.Slot;
@@ -31,6 +34,7 @@ import com.forenzix.interpreter.Interpreter.MemberAccessor;
 import com.forenzix.word.Extractor;
 import com.forenzix.word.Preprocessor;
 import com.forenzix.word.Replacer;
+import com.forenzix.word.Replacers;
 
 /**
  * The main entry point of the excel reporter program. It uses a few libraries
@@ -51,6 +55,8 @@ public class Main {
     public static final String ANSI_PURPLE = "\u001B[35m";
     public static final String ANSI_CYAN = "\u001B[36m";
     public static final String ANSI_WHITE = "\u001B[37m";
+
+    
     public static void main(String[] args) throws IOException {
         /*
          * Declarations
@@ -63,12 +69,12 @@ public class Main {
         final Iterator<Sheet> sheetItr;
         final List<String> tags;
         final MemberAccessor<Object, String, Object> maccess;
-        // final MemberUpdater<Object, String, Object> mupdate;
+        // final MemberUpdater<Object, String, Object> mupdate; // No mupdating here.
         
         final Map<String, Object> vars = new HashMap<>();
         final Slot<Interpreter> in = Slot.of("interpreter", null);
-        final Object STRINGIFY, DATEIFY, INTIFY, NUMIFY, BOOLIFY, 
-            ROW, COLUMN, FORMULA, DUPLICATE_NAME = new Object();
+        final Object TOSTRINGIFY, STRINGIFY, DATEIFY, INTIFY, NUMIFY, BOOLIFY, 
+            ROW, COLUMN, FORMULIFY, DUPLICATE_NAME = new Object();
 		final List<Replacer> replacers = new LinkedList<>();
         
         
@@ -79,6 +85,12 @@ public class Main {
         workbook = new XSSFWorkbook(wbfile);
         xssfnames = workbook.getAllNames();
         sheetItr = workbook.sheetIterator();
+
+        final int nContracts = 2;
+        Preprocessor.repeatSections(template, nContracts);
+        for (int i = 1; i <= nContracts; i += 1) {
+            vars.put("C" + i + "_Ord", i);
+        }
 
         while (sheetItr.hasNext()) {
             final Pair<Sheet, Map<String, XSSFCell>> sheetPair = Pair.of(sheetItr.next(), new HashMap<>());
@@ -114,14 +126,15 @@ public class Main {
         workbook.close();
 
         vars.put("str", STRINGIFY = new Object());
+        vars.put("tostr", TOSTRINGIFY = new Object());
         vars.put("date", DATEIFY = new Object());
         vars.put("int", INTIFY = new Object());
         vars.put("num", NUMIFY = new Object());
         vars.put("bool", BOOLIFY = new Object());
         vars.put("row", ROW = new Object());
         vars.put("col", COLUMN = new Object());
-        vars.put("formula", FORMULA = new Object());
-        vars.put("f", FORMULA);
+        vars.put("formula", FORMULIFY = new Object());
+        vars.put("f", FORMULIFY);
 
         maccess = (obj, member) -> {
             if (obj instanceof Pair) {
@@ -143,39 +156,48 @@ public class Main {
                 if (reftype(member) == ReferenceType.CELL) {
                     return cell((XSSFSheet) sheetPair.key, member);
                 }
-                
 
                 throw new IllegalArgumentException("Sheet member \"" + member + "\" is not a defined name, or a valid cell address (like A1).");
-                
             }
-            else if (obj == STRINGIFY) return ((XSSFCell) in.value().getVariable(member)).getStringCellValue();
-            // else if (obj == DATEIFY) return df.format(((XSSFCell) in.value().getVariable(member)).getDateCellValue());
-            else if (obj == DATEIFY) return ((XSSFCell) in.value().getVariable(member)).getDateCellValue();
-            else if (obj == NUMIFY) return ((XSSFCell) in.value().getVariable(member)).getNumericCellValue();
-            else if (obj == BOOLIFY) return ((XSSFCell) in.value().getVariable(member)).getBooleanCellValue();
-            else if (obj == ROW) return ((XSSFCell) in.value().getVariable(member)).getRowIndex() + 1;
-            else if (obj == COLUMN) return ((XSSFCell) in.value().getVariable(member)).getColumnIndex() + 1;
-            else if (obj == FORMULA) {
-                final CTCellFormula formula = ((XSSFCell) in.value().getVariable(member)).getCTCell().getF();
-                return formula == null ? "" : formula.getStringValue();
+            
+            final Object thing = in.value().getVariable(member);
+            if (obj == TOSTRINGIFY) {
+                return String.valueOf(thing);
+            } 
+            
+            if (thing instanceof XSSFCell) {
+                final XSSFCell cell = (XSSFCell) thing;
+              
+                if (obj == INTIFY && (cell.getCellType() == CellType.NUMERIC || cell.getCellType() == CellType.FORMULA)) {
+                    return ((Double) cell.getNumericCellValue()).intValue();
+                }
+                else if (obj == NUMIFY && (cell.getCellType() == CellType.NUMERIC || cell.getCellType() == CellType.FORMULA)) {
+                    return cell.getNumericCellValue();
+                }
+                else if (obj == DATEIFY && (cell.getCellType() == CellType.NUMERIC || cell.getCellType() == CellType.FORMULA)) {
+                    return cell.getDateCellValue();
+                }
+                else if (obj == BOOLIFY && (cell.getCellType() == CellType.BOOLEAN || cell.getCellType() == CellType.FORMULA)) {
+                    return cell.getBooleanCellValue();
+                }
+                else if (obj == STRINGIFY) {
+                    return cell.getStringCellValue();
+                }
+                else if (obj == FORMULIFY && cell.getCellType() == CellType.FORMULA) {
+                    return cell.getCellFormula();
+                }
+                else if (obj == ROW) return cell.getRowIndex() + 1;
+                else if (obj == COLUMN) return cell.getColumnIndex() + 1;
             }
-            else if (obj == INTIFY) {
-                final Object memVal = in.value().getVariable(member);
-                if (memVal instanceof XSSFCell) {
-                    return ((Double) ((XSSFCell) memVal).getNumericCellValue()).intValue();
-                }
-                else if (memVal instanceof Double) {
-                    return ((Double) memVal).intValue();
-                }
-                
-                throw new IllegalArgumentException("Converting this type to int is not yet supported: " + memVal.getClass().getSimpleName());
+            
+            else if (thing instanceof Double && obj == INTIFY) {
+                return ((Double) thing).intValue();
             }
 
             return null;
         };
 
         tags = Extractor.extractTags(template);
-        
 		for (String tag : tags) {
 			// Assume tags are of the form <<...>> or <<<...>>>
 			String prog;
@@ -203,6 +225,26 @@ public class Main {
 				spec = null;
 			}
 
+            // if (true) {
+            //     prog =  
+            //         "    let i = %d; \r\n\r" + //
+            //         "    let siteCell = \"R\" + (row.CSiteCol + i) + \"C\" + col.CSiteCol; \r\n" + //
+            //         "    siteCell = Contracts.siteCell;\r\n" + //
+            //         "    f.siteCell"
+            //             // "    (f.siteCell == \"\" or f.siteCell == empty) and str.siteCell != \"\";"
+            //         //  + "    let siteCell = \"R\" + CurrentRow + \"C\" + col.CSiteCol; "
+            //            ;
+
+            //     for (int i = 1; i <= 10; i += 1) {
+            //         in.value(new Interpreter(String.format(prog, i), vars));
+            //         in.value().setMemberAccessCallback(maccess);
+            //         final Object value = in.value().interpret();
+            //         System.out.println(i + " " + value);
+            //     }
+            //     return;
+            // }
+
+
 			// Date and number formats should be dealt with here
 			// final Interpreter interpreter = new Interpreter(prog, vars);
             in.value(new Interpreter(prog, vars));
@@ -214,7 +256,6 @@ public class Main {
 
 				replacers.add(replacer(tag, result));
 
-                
                 if (tag.contains("\n")) {
                     tag = tag.substring(0, Math.min(tag.indexOf('\n'), 16)) + "...\\n>>";
                 }
@@ -222,36 +263,19 @@ public class Main {
 			}
 			catch (Exception e) {
 				report(e, tag);
+                // e.printStackTrace();
+                // return;
 			}
 
 			// Update our variables so we can have persistance across tag executions.
 			vars.putAll(in.value().getGlobalScopeVariables());
 		}
 
-        // for (String prog : tags) {
-
-        /*
-         * Interpreter Preparation
-         * 
-         * 1. Add all named ranges as variables
-         * This will allow <<ClaimDate>> -> 31/12/2023 (Done)
-         * 
-         * 2. Named ranges that represent single columns or rows as indices
-         * This will allow <<SDateCol>> -> 3
-         * 
-         * 3. Add sheets as variables. Tweak maccess to interpret sheet members 
-         * as cell addresses.
-         * This will allow <<shtHome.A1>> -> "Yo" (Done)
-         * 
-         * 4. Add dynamic sheet accessor for contract data. Unsure if effective.
-         * This will allow <<shtHome[CX, 1 + 3]>> -> 21 (Done. Sort of)
-         * This has been changed to shtHome.x, where x is a variable that contains
-         * a string representation of a cell address
-         * 
-         * 5. Add special variables that take in a range and produce information.
-         * Unsure if useful.
-         * This will allow <<Row.CNameCell>> -> 5
-         */
+        // Save to file
+        Replacers.orderedReplace(template, replacers);
+        Path parent = Paths.get(docfile).getParent();
+        template.write(new FileOutputStream(parent.toString() + "/output.docx"));
+        template.close();
     }
 
     

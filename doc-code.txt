@@ -1,0 +1,194 @@
+<< # Initialise Totals
+T_ACOverpayPre=0;T_ACOverpayPost=0;T_ACSChargePre=0;T_ACSChargePost=0;T_ACQuantumPre=0;T_ACQuantumPost=0;T_ACStatPre=0;T_ACStatPost=0;T_ACQuantumStatPre=0;T_ACQuantumStatPost=0;T_RCCommission=0;T_RCSCharge=0;T_RCQuantum=0;T_RCStat=0;T_RCQuantumStat=0;
+"";>><< # First Page Setup
+acr1c1=Home.R94C3;acr1c1=num.acr1c1;acr1c2=Home.C100;acr1c2=num.acr1c2;acr2c1=Home.C95;acr2c1=num.acr2c1;acr2c2=Home.C101;acr2c2=num.acr2c2;acr3c1=Home.C96;acr3c1=num.acr3c1;acr3c2=Home.C102;acr3c2=num.acr3c2;rc1=Home.F91;rc1=num.rc1;rc2=Home.F92;rc2=num.rc2;rc3=Home.F93;rc3=num.rc3;
+"";>>
+
+<< # Contract Setup
+MAX_ITERATION_LIMIT=1000;CX=Contracts;C_SiteName="";C_SiteAddress="";C_SiteAccount="";C_SiteMPAN="";C_SiteMeter="";C_ContractType="";C_UtilityType="";C_ContractLength="";
+C_AverageMonthly="";C_SignDate="";C_StartDate="";C_EndDate="";C_drates="";C_nrates="";C_erates="";C_wrates="";C_xrates="";C_yrates="";C_peakRate="";C_baseRate="";C_deac="";
+C_neac="";C_eeac="";C_weac="";C_xeac="";C_yeac="";C_ACOverpayPre=0;C_ACOverpayPost=0;C_ACSChargePre=0;C_ACSChargePost=0;C_ACQuantumPre=0;C_ACQuantumPost=0;C_ACStatPre=0;
+C_ACStatPost=0;C_ACQuantumStatPre=0;C_ACQuantumStatPost=0;C_RCCommission=0;C_RCSCharge=0;C_RCQuantum=0;C_RCStat=0;C_RCQuantumStat=0;
+i=1;looking=true;C_Count=0;C_RowStart=0;C_RowEnd=0;
+>><< # Look for the start and end rows of the current contract
+while (looking and i < MAX_ITERATION_LIMIT) {
+    let siteCell = "R" + (row.CSiteCol + i) + "C" + col.CSiteCol; 
+    siteCell = Contracts.siteCell;
+    if (f.siteCell == "" and str.siteCell != "") {
+        C_Count = C_Count + 1;
+    }
+
+    # Break once we've found the contract row
+    if (C_Count == CN_Ord and C_RowStart == 0) { C_RowStart = i; }
+    else if (C_Count > CN_Ord or (str.siteCell == "" and C_RowStart != 0)) { C_RowEnd = i; looking = false; }
+    
+    i = i + 1; 
+}
+C_RowEnd;>><<
+# Gather information from every row of a contract
+i = C_RowStart
+while (i < C_RowEnd + 1) {
+    let CurrentRow = row.CSiteCol + i; let prefix = "R" + int.CurrentRow + "C";
+    
+    # Labelled Headers
+    let SiteCell = prefix + col.CSiteCol;
+    let TypeCell = prefix + col.CTypeCol;
+    let SignCell = prefix + col.CSignCol;
+    let StartCell = prefix + col.CStartCol;
+    let CEndCell = prefix + col.CCEndCol;
+    let TermCell = prefix + col.CTermCol;
+    let EAC1Cell = prefix + col.CEAC1Col;
+    let Bill1Cell = prefix + col.CBill1Col;
+    let EAC2Cell = prefix + col.CEAC2Col;
+    let Bill2Cell = prefix + col.CBill2Col;
+    let PeakCell = prefix + col.CPeakCol;
+    let BaseCell = prefix + col.CBaseCol;
+    let LengthCell = prefix + col.CLengthCol;
+    let EndCell = prefix + col.CEndCol;
+    let Usage1Cell = prefix + col.CUsage1Col;
+    let Stat1Cell = prefix + col.CStat1Col;
+    let Claim1Cell = prefix + col.CClaim1Col;
+    let EstUseCell = prefix + col.CEstUseCol;
+    let ActUseCell = prefix + col.CActUseCol;
+    let Rate2Cell = prefix + col.CRate2Col;
+    let Usage2Cell = prefix + col.CUsage2Col;
+    let Stat2Cell = prefix + col.CStat2Col;
+    let Claim2Cell = prefix + col.CClaim2Col;
+
+    # Unlabelled Headers
+    let UtilityCell = CX.C4; UtilityCell = prefix + col.UtilityCell;
+    let EAC3Cell = CX.N5; EAC3Cell = prefix + col.EAC3Cell;
+    let Bill3Cell = CX.O5; Bill3Cell = prefix + col.Bill3Cell;
+    let EAC4Cell = CX.P5; EAC4Cell = prefix + col.EAC4Cell;
+    let Bill4Cell = CX.Q5; Bill4Cell = prefix + col.Bill4Cell;
+    let EAC5Cell = CX.R5; EAC5Cell = prefix + col.EAC5Cell;
+    let Bill5Cell = CX.S5; Bill5Cell = prefix + col.Bill5Cell;
+    let EAC6Cell = CX.T5; EAC6Cell = prefix + col.EAC6Cell;
+    let Bill6Cell = CX.U5; Bill6Cell = prefix + col.Bill6Cell;
+
+    # Extra Headers
+    let OverPreCell = CX.AJ4; OverPreCell = prefix + col.OverPreCell;
+    let SCPreCell = CX.AK4; SCPreCell = prefix + col.SCPreCell;
+    let StatPreCell = CX.AL4; StatPreCell = prefix + col.StatPreCell;
+    let OverPostCell = CX.AM4; OverPostCell = prefix + col.OverPostCell;
+    let SCPostCell = CX.AN4; SCPostCell = prefix + col.SCPostCell;
+    let StatPostCell = CX.AO4; StatPostCell = prefix + col.StatPostCell;
+
+    # Subsequent Rows
+    if (i > C_RowStart) { 
+        if (i == C_RowStart + 1) { 
+            let fromMsg = " (from " + C_StartDate + ")\n";
+            C_drates = C_drates + fromMsg; 
+            C_nrates = C_nrates + fromMsg; 
+            C_erates = C_erates + fromMsg; 
+            C_wrates = C_wrates + fromMsg; 
+            C_xrates = C_xrates + fromMsg; 
+            C_yrates = C_yrates + fromMsg; 
+        }
+
+        let TempStart = Contracts.StartCell
+        let fromMsg = " (from " + date.TempStart + ")\n";
+        let temp_drates = CX.Bill1Cell; C_drates = C_drates + num.temp_drates + fromMsg;
+        let temp_nrates = CX.Bill2Cell; C_nrates = C_nrates + num.temp_nrates + fromMsg;
+        let temp_erates = CX.Bill3Cell; C_erates = C_erates + num.temp_erates + fromMsg;
+        let temp_wrates = CX.Bill4Cell; C_wrates = C_wrates + num.temp_wrates + fromMsg;
+        let temp_xrates = CX.Bill5Cell; C_xrates = C_xrates + num.temp_xrates + fromMsg;
+        let temp_yrates = CX.Bill6Cell; C_yrates = C_yrates + num.temp_yrates + fromMsg;
+        
+        # Accumulate all summable fields like quantum
+        let temp_ACOverpayPre = CX.OverPreCell; C_ACOverpayPre = C_ACOverpayPre + num.temp_ACOverpayPre;
+        let temp_ACOverpayPost = CX.OverPostCell; C_ACOverpayPost = C_ACOverpayPost + num.temp_ACOverpayPost;
+        let temp_ACSChargePre = CX.SCPreCell; C_ACSChargePre = C_ACSChargePre + num.temp_ACSChargePre;
+        let temp_ACSChargePost = CX.SCPostCell; C_ACSChargePost = C_ACSChargePost + num.temp_ACSChargePost;
+        let temp_ACStatPre = CX.StatPreCell; C_ACStatPre = C_ACStatPre + num.temp_ACStatPre;
+        let temp_ACStatPost = CX.StatPostCell; C_ACStatPost = C_ACStatPost + num.temp_ACStatPost;
+        let temp_RCQuantum = CX.Usage2Cell; C_RCQuantum = C_RCQuantum + num.temp_RCQuantum;
+        let temp_RCStat = CX.Stat2Cell; C_RCStat = C_RCStat + num.temp_RCStat;
+        let temp_RCQuantumStat = CX.Claim2Cell; C_RCQuantum = C_RCQuantum + num.temp_RCQuantumStat;
+    }
+
+    # First Row
+    else {
+
+        # C_AverageMonthly = "IDK Where?";
+        C_SiteName = CX.SiteCell
+        C_ContractType = CX.TypeCell;
+        C_UtilityType = CX.UtilityCell;
+        C_ContractLength = CX.LengthCell;
+        C_SignDate = CX.SignCell; C_SignDate = date.C_SignDate;
+        C_StartDate = CX.StartCell; C_StartDate = date.C_StartDate;
+        C_EndDate = CX.CEndCell; C_EndDate = date.C_EndDate;
+        C_drates = CX.Bill1Cell; C_drates = num.C_drates;
+        C_nrates = CX.Bill2Cell; C_nrates = num.C_nrates;
+        C_erates = CX.Bill3Cell; C_erates = num.C_erates;
+        C_wrates = CX.Bill4Cell; C_wrates = num.C_wrates;
+        C_xrates = CX.Bill5Cell; C_xrates = num.C_xrates;
+        C_yrates = CX.Bill6Cell; C_yrates = num.C_yrates;
+        C_peakRate = CX.PeakCell; C_peakRate = num.C_peakRate;
+        C_baseRate = CX.BaseCell; C_baseRate = num.C_baseRate;
+        C_deac = CX.EAC1Cell; C_deac = num.C_deac;
+        C_neac = CX.EAC2Cell; C_neac = num.C_neac;
+        C_eeac = CX.EAC3Cell; C_eeac = num.C_eeac;
+        C_weac = CX.EAC4Cell; C_weac = num.C_weac;
+        C_xeac = CX.EAC5Cell; C_xeac = num.C_xeac;
+        C_yeac = CX.EAC6Cell; C_yeac = num.C_yeac;
+        C_ACOverpayPre = CX.OverPreCell; C_ACOverpayPre = num.C_ACOverpayPre;
+        C_ACOverpayPost = CX.OverPostCell; C_ACOverpayPost = num.C_ACOverpayPost;
+        C_ACSChargePre = CX.SCPreCell; C_ACSChargePre = num.C_ACSChargePre;
+        C_ACSChargePost = CX.SCPostCell; C_ACSChargePost = num.C_ACSChargePost;
+        C_ACStatPre = CX.StatPreCell; C_ACStatPre = num.C_ACStatPre;
+        C_ACStatPost = CX.StatPostCell; C_ACStatPost = num.C_ACStatPost;
+        C_RCQuantum = CX.Usage2Cell; C_RCQuantum = num.C_RCQuantum;
+        C_RCStat = CX.Stat2Cell; C_RCStat = num.C_RCStat;
+        C_RCQuantumStat = CX.Claim2Cell; C_RCQuantumStat = num.C_RCQuantumStat;
+        
+        # Get Site Details
+        let j = 1;
+        let looking2 = true;
+        while (looking2) {
+            let SiteRow = row.SNameCol + j;
+            let SitePrefix = "R" + int.SiteRow + "C";
+            let SiteNameCell = SitePrefix + col.SNameCol; SiteNameCell = Home.SiteNameCell
+            if (str.SiteNameCell == str.C_SiteName) {
+                let SiteSAddressCell = SitePrefix + col.SAddCol; C_SiteAddress = Home.SiteSAddressCell;
+                let SiteAccountCell = SitePrefix + col.SAccCol; C_SiteAccount = Home.SiteAccountCell;
+                let SiteMPANCell = SitePrefix + col.SMPANCol; C_SiteMPAN = Home.SiteMPANCell;
+                let SiteMeterCell = SitePrefix + col.SMeterCol; C_SiteMeter = Home.SiteMeterCell;
+
+                looking2 = false;
+            }
+            else if (Home.SiteNameCell == "") {
+                looking2 = false;
+            }
+
+            j = j + 1;
+        }
+    }
+
+    i = i + 1;
+}
+"";>><< # Post While Loop Perhaps
+
+C_RCSCharge = (C_ACSChargePre + C_ACSChargePost) * num.ComRate;
+C_RCCommission = C_RCQuantum - C_RCSCharge;
+C_ACQuantumPre = C_ACOverpayPre + C_ACSChargePre;
+C_ACQuantumPost = C_ACOverpayPost + C_ACSChargePost;
+C_ACQuantumStatPre = C_ACQuantumPre + C_ACStatPre;
+C_ACQuantumStatPost = C_ACQuantumPost + C_ACStatPost;
+"";>><< # Update Totals (Possibly unnecessary)
+T_ACOverpayPre=T_ACOverpayPre+C_ACOverpayPre;
+T_ACOverpayPost=T_ACOverpayPost+C_ACOverpayPost;
+T_ACSChargePre=T_ACSChargePre+C_ACSChargePre;
+T_ACSChargePost=T_ACSChargePost+C_ACSChargePost;
+T_ACQuantumPre=T_ACQuantumPre+C_ACQuantumPre;
+T_ACQuantumPost=T_ACQuantumPost+C_ACQuantumPost;
+T_ACStatPre=T_ACStatPre+C_ACStatPre;
+T_ACStatPost=T_ACStatPost+C_ACStatPost;
+T_ACQuantumStatPre=T_ACQuantumStatPre+C_ACQuantumStatPre;
+T_ACQuantumStatPost=T_ACQuantumStatPost+C_ACQuantumStatPost;
+T_RCCommission=T_RCCommission+C_RCCommission;
+T_RCSCharge=T_RCSCharge+C_RCSCharge;
+T_RCQuantum=T_RCQuantum+C_RCQuantum;
+T_RCStat=T_RCStat+C_RCStat;
+T_RCQuantumStat=T_RCQuantumStat+C_RCQuantumStat;
+"";>>

@@ -395,7 +395,10 @@ class NodeScope {
 
     @Override
     public String toString() {
-        return "{ " + String.join("; ", statements.stream().map(x -> x.toString()).collect(Collectors.toList())) + " }";
+        return "{ " + String.join("; ", statements
+            .stream()
+            .map(x -> (x == null ? "{}" : x.toString()))
+            .collect(Collectors.toList())) + " }";
     }
 }
 
@@ -419,7 +422,9 @@ abstract class NodeStatement {
 
         @Override
         public String toString() {
-            return "if (" + expression.toString() + ") " + success.toString() + " else " + fail.toString();
+            return "if (" + expression.toString() + ") " 
+                + (success == null ? "{}" : success.toString())
+                + " else " + (fail == null ? "{}" : fail.toString());
         } 
     }
 
@@ -438,7 +443,7 @@ abstract class NodeStatement {
 
         @Override
         public String toString() {
-            return "while (" + expression.toString() + ") " + scope.toString();
+            return "while (" + expression.toString() + ") " + (scope == null ? "{}" : scope.toString());
         } 
     }
 
@@ -455,7 +460,7 @@ abstract class NodeStatement {
 
         @Override
         public String toString() {
-            return scope.toString();
+            return scope == null ? "{}" : scope.toString();
         } 
     }
 
@@ -534,7 +539,9 @@ abstract class NodeStatement {
             return expression.toString();
         } 
     }
-
+    
+    @Override
+    abstract public String toString();
     abstract Object host(Visitor visitor);
     interface Visitor {
         Object visit(Assign assignment);
@@ -630,6 +637,8 @@ interface NodeExpression {
     }
 
     <R> R host(Visitor<R> visitor);
+    @Override
+    public String toString();
     interface Visitor<R> {
         R visit(Binary node);
         R visit(Unary node);
@@ -692,6 +701,8 @@ interface NodeTerm {
     }
 
 
+    @Override
+    public String toString();
     Object host(Visitor term);
     interface Visitor {
         Object visit(Literal<?> lit);

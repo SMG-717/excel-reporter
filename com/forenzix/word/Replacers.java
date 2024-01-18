@@ -35,8 +35,10 @@ public final class Replacers {
      * @param replacers the list of replacers that need to be applied
      */
     public static void orderedReplace(XWPFDocument doc, List<Replacer> replacers) {
-        if (orderedReplace(doc.getBodyElements(), replacers) < replacers.size()) {
-            throw new RuntimeException("The replacers list has not been fully exhausted.");
+        final int count;
+        if ((count = orderedReplace(doc.getBodyElements(), replacers)) < replacers.size()) {
+            throw new RuntimeException("The replacers list has not been fully exhausted: " + 
+                (replacers.size() - count) + "/" + replacers.size() + " remain.");
         }
     }
 

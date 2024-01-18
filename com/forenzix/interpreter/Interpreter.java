@@ -1,6 +1,7 @@
 package com.forenzix.interpreter;
 
 import java.math.BigDecimal;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -121,34 +122,33 @@ public class Interpreter {
         return lastResult = interpretGlobalScope(parser.getRoot());
     }
     
-    // Suspicious... 
     public Object interpretGlobalScope(NodeScope scope) {
-
-        Object output = null;
-        for (NodeStatement statement : scope.statements) {
-            output = interpretStatement(statement);
-        }
-
-        return output;
+        return interpretScope(scope, true);
     }
 
     public Object interpretScope(NodeScope scope) {
+        return interpretScope(scope, false);
+    }
 
-        enterScope();
+    public Object interpretScope(NodeScope scope, boolean global) {
+
+        if (!global) enterScope();
         Object output = null;
         for (NodeStatement statement : scope.statements) {
             output = interpretStatement(statement);
         }
-        exitScope();
+        if (!global) exitScope();
 
         return output;
     }
 
     private final NodeStatement.Visitor statementVisitor = new NodeStatement.Visitor() {
         public Object visit(NodeStatement.Assign assignment) {
-            if (!defined(assignment.qualifier.name)) {
-                throw error("Assignment to an undefined variable: " + assignment.qualifier.name);
-            }
+            // Uncomment this if you do not want to allow users to use undeclared variables
+            // However, it doesn't make much sense to have this on without typing.
+            // if (!defined(assignment.qualifier.name)) {
+            //     throw error("Assignment to an undefined variable: " + assignment.qualifier.name);
+            // }
 
             final Object value = interpretExpression(assignment.expression);
             addVariable(assignment.qualifier.name, value);
@@ -231,6 +231,11 @@ public class Interpreter {
             if (left instanceof String && node.op == BinaryOperator.Add) {
                 return ((String) left).concat(stringValue(right = interpretExpression(node.rhs)));
             }
+            
+            // Special case: String formatting
+            if (left instanceof String && node.op == BinaryOperator.Modulo) {
+                return String.format((String) left, interpretExpression(node.rhs));
+            }
 
             // Special case: Null check
             if (node.op == BinaryOperator.Equal) {
@@ -304,6 +309,10 @@ public class Interpreter {
 
         if (o instanceof Date) {
             return format.format(o);
+        }
+
+        else if (o instanceof Double) {
+            return NumberFormat.getInstance().format((Double) o);
         }
 
         return String.valueOf(o);

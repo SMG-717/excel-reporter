@@ -13,7 +13,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.io.input.InfiniteCircularInputStream;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.util.CellReference;
@@ -78,8 +77,8 @@ public class Main {
 		final List<Replacer> replacers = new LinkedList<>();
         
         
-        wbfile = "C:\\Users\\SaifeldinMohamed\\Desktop\\BEC Calculator v2.4.2 (SMG).xlsm";
-        docfile = "C:\\Users\\SaifeldinMohamed\\Desktop\\S2 BEC Report Template v1.23 - SMG.docx";
+        wbfile = "C:\\dev\\excel-reporter-files\\BEC Calculator v2.4.2 (SMG).xlsm";
+        docfile = "C:\\dev\\excel-reporter-files\\S2 BEC Report Template v1.23 - SMG.docx";
 
         template = new XWPFDocument(Files.newInputStream(Paths.get(docfile)));
         workbook = new XSSFWorkbook(wbfile);
@@ -251,6 +250,7 @@ public class Main {
 			in.value().setMemberAccessCallback(maccess);
 
 			try {
+                System.out.println(tag);
 				final Object output = in.value().interpret();
                 final String result = output == null ? "" : format(output, spec);
 

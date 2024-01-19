@@ -118,12 +118,10 @@ public final class Preprocessor {
         rPr.set(source.getCTR().getRPr());
 
         final String sourceText = source.text();
+        clone.setText(sourceText, 0);
         if (sourceText.isBlank()) {
             int brs = source.getCTR().getBrList().size();
             for (int i = 0; i < brs; i += 1) clone.getCTR().addNewBr();
-        }
-        else {
-            clone.setText(sourceText, 0);
         }
 
         return clone;

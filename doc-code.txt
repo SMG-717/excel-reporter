@@ -12,19 +12,19 @@ C_ACStatPost=0;C_ACQuantumStatPre=0;C_ACQuantumStatPost=0;C_RCCommission=0;C_RCS
 i=1;looking=true;C_Count=0;C_RowStart=0;C_RowEnd=0;
 >><< # Look for the start and end rows of the current contract
 while (looking and i < MAX_ITERATION_LIMIT) {
-    let siteCell = "R" + (row.CSiteCol + i) + "C" + col.CSiteCol; 
-    siteCell = Contracts.siteCell;
-    if (f.siteCell == "" and str.siteCell != "") {
+    let CurrentRow = row.CSiteCol + i; let prefix = "R" + int.CurrentRow + "C";
+    let siteCell = prefix + col.CSiteCol; siteCell = Contracts.siteCell;
+    if ((f.siteCell == empty or f.siteCell == "") and not (str.siteCell == empty or str.siteCell == "")) {
         C_Count = C_Count + 1;
     }
 
     # Break once we've found the contract row
     if (C_Count == CN_Ord and C_RowStart == 0) { C_RowStart = i; }
-    else if (C_Count > CN_Ord or (str.siteCell == "" and C_RowStart != 0)) { C_RowEnd = i; looking = false; }
+    else if (C_Count > CN_Ord or ((str.siteCell == empty or str.siteCell == "") and C_RowStart != 0)) { C_RowEnd = i; looking = false; }
     
     i = i + 1; 
 }
-C_RowEnd;>><<
+"C="+C_Count+" S="+C_RowStart+" E="+C_RowEnd;>><<
 # Gather information from every row of a contract
 i = C_RowStart
 while (i < C_RowEnd + 1) {

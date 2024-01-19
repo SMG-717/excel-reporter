@@ -250,7 +250,6 @@ public class Main {
 			in.value().setMemberAccessCallback(maccess);
 
 			try {
-                System.out.println(tag);
 				final Object output = in.value().interpret();
                 final String result = output == null ? "" : format(output, spec);
 

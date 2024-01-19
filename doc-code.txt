@@ -27,7 +27,7 @@ while (looking and i < MAX_ITERATION_LIMIT) {
 "C="+C_Count+" S="+C_RowStart+" E="+C_RowEnd;>><<
 # Gather information from every row of a contract
 i = C_RowStart
-while (i < C_RowEnd + 1) {
+while (i < C_RowEnd) {
     let CurrentRow = row.CSiteCol + i; let prefix = "R" + int.CurrentRow + "C";
     
     # Labelled Headers

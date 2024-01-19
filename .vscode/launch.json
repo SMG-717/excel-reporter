@@ -8,6 +8,13 @@
             "type": "java",
             "name": "Main",
             "request": "launch",
+            "mainClass": "Main",
+            "projectName": "excel-reporter_44e8a929"
+        },
+        {
+            "type": "java",
+            "name": "Main",
+            "request": "launch",
             "mainClass": "src.Main",
             "projectName": "excel-reporter_44e8a929"
         },

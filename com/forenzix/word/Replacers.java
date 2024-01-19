@@ -12,7 +12,6 @@ import org.apache.poi.xwpf.usermodel.XWPFRun;
 import org.apache.poi.xwpf.usermodel.XWPFSDT;
 import org.apache.poi.xwpf.usermodel.XWPFTable;
 
-import com.mendix.systemwideinterfaces.core.IContext;
 
 /**
  * This class contains functions for handling {@code Replacer} objects and 

@@ -9,14 +9,13 @@
             "name": "Main",
             "request": "launch",
             "mainClass": "Main",
-            "projectName": "excel-reporter_44e8a929"
-        },
-        {
-            "type": "java",
-            "name": "Main",
-            "request": "launch",
-            "mainClass": "src.Main",
-            "projectName": "excel-reporter_44e8a929"
+            "projectName": "excel-reporter_b2ac6549",
+            "args": [
+                "-t",
+                "C:\\Users\\SaifeldinMohamed\\Desktop\\S2 BEC Report Template v1.23 - SMG.docx",
+                "-c",
+                "C:\\Users\\SaifeldinMohamed\\Desktop\\BEC Calculator v2.4.2 (SMG).xlsm"
+            ]
         },
         {
             "type": "java",

@@ -12,6 +12,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
+import java.util.stream.Collectors;
 
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -57,11 +59,48 @@ public class Main {
 
     
     public static void main(String[] args) throws IOException {
+        try {
+            mainProcedure(args);
+        }
+        catch (Exception e) {
+            System.out.println(ANSI_RED + "Something went wrong. Please inspect the following error.");
+            e.printStackTrace();
+        }
+        
+        System.out.print("Press Enter to close this window.");
+        System.out.print(ANSI_RESET);
+        final Scanner scan = new Scanner(System.in);
+        scan.nextLine();
+        scan.close();
+    }
+
+    public static void mainProcedure(String[] args) throws IOException {
         /*
          * Declarations
          */
+        String wbfile = null, docfile = null;
+        for (int i = 0; i < args.length; i += 1) {
+            if (args[i].startsWith("-")) {
+                if (args[i].equals("-t") || args[i].equals("-template")) {
+                    docfile = args[i += 1];
+                }
+                if (args[i].equals("-c") || args[i].equals("-calc")) {
+                    wbfile = args[i += 1];
+                }
+            }
+        }
+        if (docfile == null || wbfile == null) {
+            System.out.println(
+                ANSI_RED +
+                "The template and workbook files were not supplied correctly\n." +
+                "Please use the format: java app -t [template location] -c [calculator location]"
+                + ANSI_RESET
+            );
 
-        final String wbfile, docfile;
+            throw new IllegalArgumentException("One or more required files was null");
+        }
+
+
         final XSSFWorkbook workbook;
         final XWPFDocument template;
         final List<XSSFName> xssfnames;
@@ -75,21 +114,11 @@ public class Main {
         final Object TOSTRINGIFY, STRINGIFY, DATEIFY, INTIFY, NUMIFY, BOOLIFY, 
             ROW, COLUMN, FORMULIFY, DUPLICATE_NAME = new Object();
 		final List<Replacer> replacers = new LinkedList<>();
-        
-        
-        wbfile = "C:\\dev\\excel-reporter-files\\BEC Calculator v2.4.2 (SMG).xlsm";
-        docfile = "C:\\dev\\excel-reporter-files\\S2 BEC Report Template v1.23 - SMG.docx";
 
         template = new XWPFDocument(Files.newInputStream(Paths.get(docfile)));
         workbook = new XSSFWorkbook(wbfile);
         xssfnames = workbook.getAllNames();
         sheetItr = workbook.sheetIterator();
-
-        final int nContracts = 2;
-        Preprocessor.repeatSections(template, nContracts);
-        for (int i = 1; i <= nContracts; i += 1) {
-            vars.put("C" + i + "_Ord", i);
-        }
 
         while (sheetItr.hasNext()) {
             final Pair<Sheet, Map<String, XSSFCell>> sheetPair = Pair.of(sheetItr.next(), new HashMap<>());
@@ -196,22 +225,46 @@ public class Main {
             return null;
         };
 
+        // Find the number of contracts according to the template
+        final List<String> specialTags = Extractor.extractTags(template).stream()
+            .filter(s -> s.startsWith("<<<"))
+            .collect(Collectors.toList());
+        
+
+        int NumberOfContracts = 0;
+		for (String tag : specialTags) {
+			// Assume tags are of the form <<...>> or <<<...>>>
+			String prog = tag.substring(3, tag.length() - 3);
+
+            in.value(new Interpreter(prog, vars));
+			in.value().setMemberAccessCallback(maccess);
+
+			try {
+                in.value().interpret();
+				replacers.add(replacer(tag, ""));
+			}
+			catch (Exception e) {
+				report(e, tag);
+			}
+
+            if (in.value().findVariable("NUMBER_OF_CONTRACTS").isPresent()) {
+                NumberOfContracts = ((Double) in.value().getVariable("NUMBER_OF_CONTRACTS")).intValue();
+            }
+		}
+        
+        Replacers.orderedReplace(template, replacers);
+        replacers.clear();
+        
+        final int nContracts = NumberOfContracts;
+        Preprocessor.repeatSections(template, nContracts);
+        for (int i = 1; i <= nContracts; i += 1) {
+            vars.put("C" + i + "_Ord", i);
+        }
+
         tags = Extractor.extractTags(template);
 		for (String tag : tags) {
-			// Assume tags are of the form <<...>> or <<<...>>>
-			String prog;
-			if (tag.startsWith("<<<") && tag.endsWith(">>>")) {
-				// We can some day use triple quoted tags for something. 
-				// For now, they are treated the same. -SMG
-				prog = tag.substring(3, tag.length() - 3);
-			}
-			else if (tag.startsWith("<<") && tag.endsWith(">>")) {
-				prog = tag.substring(2, tag.length() - 2);
-			}
-			else {
-				throw new IllegalArgumentException("Tag should start and end with double or triple angle brackets (<>)." 
-				+ "\nInstead it looks like: " + tag);
-			}
+			// Assume tags are of the form <<...>>
+			String prog = tag.substring(2, tag.length() - 2);
 
 			final int colon = prog.lastIndexOf(':');
 			final int quote = Math.max(prog.lastIndexOf('\"'), prog.lastIndexOf('\''));
@@ -224,28 +277,6 @@ public class Main {
 				spec = null;
 			}
 
-            // if (true) {
-            //     prog =  
-            //         "    let i = %d; \r\n\r" + //
-            //         "    let siteCell = \"R\" + (row.CSiteCol + i) + \"C\" + col.CSiteCol; \r\n" + //
-            //         "    siteCell = Contracts.siteCell;\r\n" + //
-            //         "    f.siteCell"
-            //             // "    (f.siteCell == \"\" or f.siteCell == empty) and str.siteCell != \"\";"
-            //         //  + "    let siteCell = \"R\" + CurrentRow + \"C\" + col.CSiteCol; "
-            //            ;
-
-            //     for (int i = 1; i <= 10; i += 1) {
-            //         in.value(new Interpreter(String.format(prog, i), vars));
-            //         in.value().setMemberAccessCallback(maccess);
-            //         final Object value = in.value().interpret();
-            //         System.out.println(i + " " + value);
-            //     }
-            //     return;
-            // }
-
-
-			// Date and number formats should be dealt with here
-			// final Interpreter interpreter = new Interpreter(prog, vars);
             in.value(new Interpreter(prog, vars));
 			in.value().setMemberAccessCallback(maccess);
 
@@ -262,8 +293,6 @@ public class Main {
 			}
 			catch (Exception e) {
 				report(e, tag);
-                // e.printStackTrace();
-                // return;
 			}
 
 			// Update our variables so we can have persistance across tag executions.
@@ -273,8 +302,10 @@ public class Main {
         // Save to file
         Replacers.orderedReplace(template, replacers);
         Path parent = Paths.get(docfile).getParent();
-        template.write(new FileOutputStream(parent.toString() + "/output.docx"));
+        template.write(new FileOutputStream(parent.toString() + "\\output.docx"));
         template.close();
+
+        System.out.println(ANSI_GREEN + "Operation Successful! Report was generated into " + parent.toString() + "\\output.docx");
     }
 
     
@@ -371,18 +402,6 @@ public class Main {
         }
         
     }
-
-    // private static XSSFCell cell(XSSFWorkbook wb, String loc) {
-    //     final CellReference ref = ref(loc);
-
-    //     final XSSFSheet sheet = wb.getSheet(ref.getSheetName());
-    //     if (sheet == null) return null;
-        
-    //     final XSSFRow row = sheet.getRow(ref.getRow());
-    //     if (row == null) return null;
-        
-    //     return row.getCell(ref.getCol());
-    // }
     
     private static XSSFCell cell(XSSFSheet sheet, String loc) {
         final CellReference ref = ref(loc);

@@ -16,8 +16,6 @@ import org.apache.poi.xwpf.usermodel.XWPFTable;
 import org.apache.poi.xwpf.usermodel.XWPFTableCell;
 import org.apache.poi.xwpf.usermodel.XWPFTableRow;
 
-import com.mendix.core.Core;
-
 public abstract class Extractor {
 
 	abstract <R> List<R> generateReplacers(XWPFDocument doc);
@@ -172,11 +170,7 @@ public abstract class Extractor {
 		StringWriter sw = new StringWriter();
 		e.printStackTrace(new PrintWriter(sw));
 
-		Core.getLogger("Tag Extractor").error(new StringBuilder("Something went wrong processing the following program:")
-			.append("\n").append(program).append("\n").append("Error Details:\n")
-			.append(String.format("Type: %s \n", e.getClass().getSimpleName()))
-			.append(String.format("Message: %s \n", e.getMessage()))
-			.append(String.format("Stack Trace: %s \n", sw.toString())).toString());
+		System.out.println(sw.toString());
 	}
 
 	

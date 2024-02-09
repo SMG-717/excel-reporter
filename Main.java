@@ -2,7 +2,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.NumberFormat;
@@ -47,15 +46,16 @@ import com.forenzix.word.Replacers;
  */
 public class Main {
 
-    public static final String ANSI_RESET = "\u001B[0m";
-    public static final String ANSI_BLACK = "\u001B[30m";
-    public static final String ANSI_RED = "\u001B[31m";
-    public static final String ANSI_GREEN = "\u001B[32m";
-    public static final String ANSI_YELLOW = "\u001B[33m";
-    public static final String ANSI_BLUE = "\u001B[34m";
-    public static final String ANSI_PURPLE = "\u001B[35m";
-    public static final String ANSI_CYAN = "\u001B[36m";
-    public static final String ANSI_WHITE = "\u001B[37m";
+    public static final String 
+        ANSI_RESET = "\u001B[0m",
+        ANSI_BLACK = "\u001B[30m",
+        ANSI_RED = "\u001B[31m",
+        ANSI_GREEN = "\u001B[32m",
+        ANSI_YELLOW = "\u001B[33m",
+        ANSI_BLUE = "\u001B[34m",
+        ANSI_PURPLE = "\u001B[35m",
+        ANSI_CYAN = "\u001B[36m",
+        ANSI_WHITE = "\u001B[37m";
 
     
     public static void main(String[] args) throws IOException {
@@ -72,34 +72,50 @@ public class Main {
         final Scanner scan = new Scanner(System.in);
         scan.nextLine();
         scan.close();
+        System.exit(0);
     }
 
-    public static void mainProcedure(String[] args) throws IOException {
-        /*
-         * Declarations
-         */
-        String wbfile = null, docfile = null;
+
+    public static Map<String, String> parseArgs(String[] args) {
+        final Map<String, String> argmap = new HashMap<>();
         for (int i = 0; i < args.length; i += 1) {
             if (args[i].startsWith("-")) {
                 if (args[i].equals("-t") || args[i].equals("-template")) {
-                    docfile = args[i += 1];
+                    argmap.put("t", args[i += 1]);
                 }
                 if (args[i].equals("-c") || args[i].equals("-calc")) {
-                    wbfile = args[i += 1];
+                    argmap.put("c", args[i += 1]);
+                }
+                if (args[i].equals("-o") || args[i].equals("-out") || args[i].equals("-output")) {
+                    argmap.put("o", args[i += 1]);
                 }
             }
         }
-        if (docfile == null || wbfile == null) {
+
+        return argmap;
+    }
+
+
+    public static void mainProcedure(String[] args) throws IOException {
+        
+        final String wbfile, docfile, outfile;
+        final Map<String, String> argmap = parseArgs(args);
+
+        if ((docfile = argmap.get("t")) == null || (wbfile = argmap.get("c")) == null) {
             System.out.println(
                 ANSI_RED +
                 "The template and workbook files were not supplied correctly\n." +
-                "Please use the format: java app -t [template location] -c [calculator location]"
+                "Please use the format: java app -t <template location> -c <calculator location> [-o <report destination>]"
                 + ANSI_RESET
             );
-
+                
             throw new IllegalArgumentException("One or more required files was null");
         }
-
+        
+        if (argmap.get("o") == null)
+            outfile = Paths.get(docfile).getParent().toString() + "\\output.docx";
+        else
+            outfile = argmap.get("o");
 
         final XSSFWorkbook workbook;
         final XWPFDocument template;
@@ -185,7 +201,8 @@ public class Main {
                     return cell((XSSFSheet) sheetPair.key, member);
                 }
 
-                throw new IllegalArgumentException("Sheet member \"" + member + "\" is not a defined name, or a valid cell address (like A1).");
+                throw new IllegalArgumentException("Sheet member \"" + member + 
+                    "\" is not a defined name, or a valid cell address (like A1).");
             }
             
             final Object thing = in.value().getVariable(member);
@@ -301,28 +318,19 @@ public class Main {
 
         // Save to file
         Replacers.orderedReplace(template, replacers);
-        Path parent = Paths.get(docfile).getParent();
-        template.write(new FileOutputStream(parent.toString() + "\\output.docx"));
+        template.write(new FileOutputStream(outfile));
         template.close();
 
-        System.out.println(ANSI_GREEN + "Operation Successful! Report was generated into " + parent.toString() + "\\output.docx");
+        System.out.println(ANSI_GREEN + "Operation Successful! Report was generated into " + outfile);
     }
 
     
 	static Replacer replacer(String bookmark, String replacement) {
 		return Replacer.of(bookmark, replacement);
 	}
+    
 
 	static void report(Exception e, String program) {
-		// StringWriter sw = new StringWriter();
-		// e.printStackTrace(new PrintWriter(sw));
-
-		// Core.getLogger("Tag Extractor").error(new StringBuilder("Something went wrong processing the following program:")
-		// 	.append("\n").append(program).append("\n").append("Error Details:\n")
-		// 	.append(String.format("Type: %s \n", e.getClass().getSimpleName()))
-		// 	.append(String.format("Message: %s \n", e.getMessage()))
-		// 	.append(String.format("Stack Trace: %s \n", sw.toString())).toString());
-
         if (program.contains("\n")) {
             program = program.substring(0, Math.min(program.indexOf('\n'), 16)) + "...\\n>>";
         }
@@ -382,6 +390,7 @@ public class Main {
         return ReferenceType.INVALID;
     }
 
+
     private static final String r1c1pattern = "R\\d+C\\d+";
     private static CellReference refR1C1(String ref) {
         if (!(ref = ref.trim()).matches(r1c1pattern)) return null;
@@ -393,6 +402,7 @@ public class Main {
         );
     }
 
+
     private static CellReference ref(String address) {        
         try {
             return new CellReference(address);
@@ -403,6 +413,7 @@ public class Main {
         
     }
     
+
     private static XSSFCell cell(XSSFSheet sheet, String loc) {
         final CellReference ref = ref(loc);
 
@@ -412,9 +423,11 @@ public class Main {
         return row.getCell(ref.getCol());
     }
 
+    
     private static String codename(Sheet sheet) {
         return ((XSSFSheet) sheet).getCTWorksheet().getSheetPr().getCodeName();
     }
+
 
     private static boolean validName(String name) {
         return new Tokeniser(name).nextToken().isAny(TokenType.Qualifier);

@@ -6,6 +6,8 @@ import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -46,6 +48,7 @@ import com.forenzix.word.Replacers;
  */
 public class Main {
 
+    public static final String VERSION = "1.1";
     public static final String 
         ANSI_RESET = "\u001B[0m",
         ANSI_BLACK = "\u001B[30m",
@@ -88,6 +91,12 @@ public class Main {
                 }
                 if (args[i].equals("-o") || args[i].equals("-out") || args[i].equals("-output")) {
                     argmap.put("o", args[i += 1]);
+                }
+                if (args[i].equals("-v") || args[i].equals("-version")) {
+                    // If version number is requested, abort everything 
+                    // and simply print the version number
+                    System.out.println("excelr v" + VERSION);
+                    System.exit(0);
                 }
             }
         }
@@ -179,6 +188,7 @@ public class Main {
         vars.put("col", COLUMN = new Object());
         vars.put("formula", FORMULIFY = new Object());
         vars.put("f", FORMULIFY);
+        vars.put("Now", Date.from(Instant.now()));
 
         maccess = (obj, member) -> {
             if (obj instanceof Pair) {

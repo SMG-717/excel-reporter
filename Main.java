@@ -49,27 +49,24 @@ import com.forenzix.word.Replacers;
 public class Main {
 
     public static final String VERSION = "1.1";
-    public static final String 
-        ANSI_RESET = "\u001B[0m",
-        ANSI_BLACK = "\u001B[30m",
-        ANSI_RED = "\u001B[31m",
-        ANSI_GREEN = "\u001B[32m",
-        ANSI_YELLOW = "\u001B[33m",
-        ANSI_BLUE = "\u001B[34m",
-        ANSI_PURPLE = "\u001B[35m",
-        ANSI_CYAN = "\u001B[36m",
-        ANSI_WHITE = "\u001B[37m";
+    public static final String ANSI_RESET = "\u001B[0m",
+            ANSI_BLACK = "\u001B[30m",
+            ANSI_RED = "\u001B[31m",
+            ANSI_GREEN = "\u001B[32m",
+            ANSI_YELLOW = "\u001B[33m",
+            ANSI_BLUE = "\u001B[34m",
+            ANSI_PURPLE = "\u001B[35m",
+            ANSI_CYAN = "\u001B[36m",
+            ANSI_WHITE = "\u001B[37m";
 
-    
     public static void main(String[] args) throws IOException {
         try {
             mainProcedure(args);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             System.out.println(ANSI_RED + "Something went wrong. Please inspect the following error.");
             e.printStackTrace();
         }
-        
+
         System.out.print("Press Enter to close this window.");
         System.out.print(ANSI_RESET);
         final Scanner scan = new Scanner(System.in);
@@ -77,7 +74,6 @@ public class Main {
         scan.close();
         System.exit(0);
     }
-
 
     public static Map<String, String> parseArgs(String[] args) {
         final Map<String, String> argmap = new HashMap<>();
@@ -93,7 +89,7 @@ public class Main {
                     argmap.put("o", args[i += 1]);
                 }
                 if (args[i].equals("-v") || args[i].equals("-version")) {
-                    // If version number is requested, abort everything 
+                    // If version number is requested, abort everything
                     // and simply print the version number
                     System.out.println("excelr v" + VERSION);
                     System.exit(0);
@@ -104,23 +100,21 @@ public class Main {
         return argmap;
     }
 
-
     public static void mainProcedure(String[] args) throws IOException {
-        
+
         final String wbfile, docfile, outfile;
         final Map<String, String> argmap = parseArgs(args);
 
         if ((docfile = argmap.get("t")) == null || (wbfile = argmap.get("c")) == null) {
             System.out.println(
-                ANSI_RED +
-                "The template and workbook files were not supplied correctly\n." +
-                "Please use the format: java app -t <template location> -c <calculator location> [-o <report destination>]"
-                + ANSI_RESET
-            );
-                
+                    ANSI_RED +
+                            "The template and workbook files were not supplied correctly\n." +
+                            "Please use the format: java app -t <template location> -c <calculator location> [-o <report destination>]"
+                            + ANSI_RESET);
+
             throw new IllegalArgumentException("One or more required files was null");
         }
-        
+
         if (argmap.get("o") == null)
             outfile = Paths.get(docfile).getParent().toString() + "\\output.docx";
         else
@@ -133,12 +127,12 @@ public class Main {
         final List<String> tags;
         final MemberAccessor<Object, String, Object> maccess;
         // final MemberUpdater<Object, String, Object> mupdate; // No mupdating here.
-        
+
         final Map<String, Object> vars = new HashMap<>();
         final Slot<Interpreter> in = Slot.of("interpreter", null);
-        final Object TOSTRINGIFY, STRINGIFY, DATEIFY, INTIFY, NUMIFY, BOOLIFY, 
-            ROW, COLUMN, FORMULIFY, DUPLICATE_NAME = new Object();
-		final List<Replacer> replacers = new LinkedList<>();
+        final Object TOSTRINGIFY, STRINGIFY, DATEIFY, INTIFY, NUMIFY, BOOLIFY,
+                ROW, COLUMN, FORMULIFY, DUPLICATE_NAME = new Object();
+        final List<Replacer> replacers = new LinkedList<>();
 
         template = new XWPFDocument(Files.newInputStream(Paths.get(docfile)));
         workbook = new XSSFWorkbook(wbfile);
@@ -156,7 +150,7 @@ public class Main {
 
         for (XSSFName xname : xssfnames) {
             if (reftype(xname.getRefersToFormula()) == ReferenceType.CELL) {
-                
+
                 final CellReference ref = ref(xname.getRefersToFormula());
                 final String sname = ref.getSheetName(), name = xname.getNameName();
                 final int row = ref.getRow(), col = ref.getCol();
@@ -193,7 +187,7 @@ public class Main {
         maccess = (obj, member) -> {
             if (obj instanceof Pair) {
                 final Pair<Sheet, Map<String, XSSFCell>> sheetPair = (Pair) obj;
-                
+
                 // There are multiple ways to access data in an Excel sheet
                 // 1. It is a named range
                 if (sheetPair.value.containsKey(member)) {
@@ -211,40 +205,40 @@ public class Main {
                     return cell((XSSFSheet) sheetPair.key, member);
                 }
 
-                throw new IllegalArgumentException("Sheet member \"" + member + 
-                    "\" is not a defined name, or a valid cell address (like A1).");
+                throw new IllegalArgumentException("Sheet member \"" + member +
+                        "\" is not a defined name, or a valid cell address (like A1).");
             }
-            
+
             final Object thing = in.value().getVariable(member);
             if (obj == TOSTRINGIFY) {
                 return String.valueOf(thing);
-            } 
-            
+            }
+
             if (thing instanceof XSSFCell) {
                 final XSSFCell cell = (XSSFCell) thing;
-              
-                if (obj == INTIFY && (cell.getCellType() == CellType.NUMERIC || cell.getCellType() == CellType.FORMULA)) {
+
+                if (obj == INTIFY
+                        && (cell.getCellType() == CellType.NUMERIC || cell.getCellType() == CellType.FORMULA)) {
                     return ((Double) cell.getNumericCellValue()).intValue();
-                }
-                else if (obj == NUMIFY && (cell.getCellType() == CellType.NUMERIC || cell.getCellType() == CellType.FORMULA)) {
+                } else if (obj == NUMIFY
+                        && (cell.getCellType() == CellType.NUMERIC || cell.getCellType() == CellType.FORMULA)) {
                     return cell.getNumericCellValue();
-                }
-                else if (obj == DATEIFY && (cell.getCellType() == CellType.NUMERIC || cell.getCellType() == CellType.FORMULA)) {
+                } else if (obj == DATEIFY
+                        && (cell.getCellType() == CellType.NUMERIC || cell.getCellType() == CellType.FORMULA)) {
                     return cell.getDateCellValue();
-                }
-                else if (obj == BOOLIFY && (cell.getCellType() == CellType.BOOLEAN || cell.getCellType() == CellType.FORMULA)) {
+                } else if (obj == BOOLIFY
+                        && (cell.getCellType() == CellType.BOOLEAN || cell.getCellType() == CellType.FORMULA)) {
                     return cell.getBooleanCellValue();
-                }
-                else if (obj == STRINGIFY) {
+                } else if (obj == STRINGIFY) {
                     return cell.getStringCellValue();
-                }
-                else if (obj == FORMULIFY && cell.getCellType() == CellType.FORMULA) {
+                } else if (obj == FORMULIFY && cell.getCellType() == CellType.FORMULA) {
                     return cell.getCellFormula();
-                }
-                else if (obj == ROW) return cell.getRowIndex() + 1;
-                else if (obj == COLUMN) return cell.getColumnIndex() + 1;
+                } else if (obj == ROW)
+                    return cell.getRowIndex() + 1;
+                else if (obj == COLUMN)
+                    return cell.getColumnIndex() + 1;
             }
-            
+
             else if (thing instanceof Double && obj == INTIFY) {
                 return ((Double) thing).intValue();
             }
@@ -254,34 +248,32 @@ public class Main {
 
         // Find the number of contracts according to the template
         final List<String> specialTags = Extractor.extractTags(template).stream()
-            .filter(s -> s.startsWith("<<<"))
-            .collect(Collectors.toList());
-        
+                .filter(s -> s.startsWith("<<<"))
+                .collect(Collectors.toList());
 
         int NumberOfContracts = 0;
-		for (String tag : specialTags) {
-			// Assume tags are of the form <<...>> or <<<...>>>
-			String prog = tag.substring(3, tag.length() - 3);
+        for (String tag : specialTags) {
+            // Assume tags are of the form <<...>> or <<<...>>>
+            String prog = tag.substring(3, tag.length() - 3);
 
             in.value(new Interpreter(prog, vars));
-			in.value().setMemberAccessCallback(maccess);
+            in.value().setMemberAccessCallback(maccess);
 
-			try {
+            try {
                 in.value().interpret();
-				replacers.add(replacer(tag, ""));
-			}
-			catch (Exception e) {
-				report(e, tag);
-			}
+                replacers.add(replacer(tag, ""));
+            } catch (Exception e) {
+                report(e, tag);
+            }
 
             if (in.value().findVariable("NUMBER_OF_CONTRACTS").isPresent()) {
                 NumberOfContracts = ((Double) in.value().getVariable("NUMBER_OF_CONTRACTS")).intValue();
             }
-		}
-        
+        }
+
         Replacers.orderedReplace(template, replacers);
         replacers.clear();
-        
+
         final int nContracts = NumberOfContracts;
         Preprocessor.repeatSections(template, nContracts);
         for (int i = 1; i <= nContracts; i += 1) {
@@ -289,42 +281,40 @@ public class Main {
         }
 
         tags = Extractor.extractTags(template);
-		for (String tag : tags) {
-			// Assume tags are of the form <<...>>
-			String prog = tag.substring(2, tag.length() - 2);
+        for (String tag : tags) {
+            // Assume tags are of the form <<...>>
+            String prog = tag.substring(2, tag.length() - 2);
 
-			final int colon = prog.lastIndexOf(':');
-			final int quote = Math.max(prog.lastIndexOf('\"'), prog.lastIndexOf('\''));
-			final String spec;
-			if (colon != -1 && quote < colon) {
-				spec = prog.substring(colon + 1, prog.length()).strip();
-				prog = prog.substring(0, colon);
-			}
-			else {
-				spec = null;
-			}
+            final int colon = prog.lastIndexOf(':');
+            final int quote = Math.max(prog.lastIndexOf('\"'), prog.lastIndexOf('\''));
+            final String spec;
+            if (colon != -1 && quote < colon) {
+                spec = prog.substring(colon + 1, prog.length()).strip();
+                prog = prog.substring(0, colon);
+            } else {
+                spec = null;
+            }
 
             in.value(new Interpreter(prog, vars));
-			in.value().setMemberAccessCallback(maccess);
+            in.value().setMemberAccessCallback(maccess);
 
-			try {
-				final Object output = in.value().interpret();
+            try {
+                final Object output = in.value().interpret();
                 final String result = output == null ? "" : format(output, spec);
 
-				replacers.add(replacer(tag, result));
+                replacers.add(replacer(tag, result));
 
                 if (tag.contains("\n")) {
                     tag = tag.substring(0, Math.min(tag.indexOf('\n'), 16)) + "...\\n>>";
                 }
                 System.out.println(tag + " -> " + result.trim());
-			}
-			catch (Exception e) {
-				report(e, tag);
-			}
+            } catch (Exception e) {
+                report(e, tag);
+            }
 
-			// Update our variables so we can have persistance across tag executions.
-			vars.putAll(in.value().getGlobalScopeVariables());
-		}
+            // Update our variables so we can have persistance across tag executions.
+            vars.putAll(in.value().getGlobalScopeVariables());
+        }
 
         // Save to file
         Replacers.orderedReplace(template, replacers);
@@ -334,110 +324,112 @@ public class Main {
         System.out.println(ANSI_GREEN + "Operation Successful! Report was generated into " + outfile);
     }
 
-    
-	static Replacer replacer(String bookmark, String replacement) {
-		return Replacer.of(bookmark, replacement);
-	}
-    
+    static Replacer replacer(String bookmark, String replacement) {
+        return Replacer.of(bookmark, replacement);
+    }
 
-	static void report(Exception e, String program) {
+    static void report(Exception e, String program) {
         if (program.contains("\n")) {
             program = program.substring(0, Math.min(program.indexOf('\n'), 16)) + "...\\n>>";
         }
-        
-        final String msg = e.getMessage() == null ? 
-            "[" + e.getClass().getSimpleName() + "]" : 
-            e.getMessage().replace("\n", " ");
+
+        final String msg = e.getMessage() == null ? "[" + e.getClass().getSimpleName() + "]"
+                : e.getMessage().replace("\n", " ");
 
         System.out.println(program + " -> " + ANSI_RED + "Error: " + msg + ANSI_RESET);
-	}
+    }
 
-    
-	private static final DateFormat shortDate = new SimpleDateFormat("dd/MM/yyyy");
- 	static String format(Object thing, String spec) {
+    private static final DateFormat shortDate = new SimpleDateFormat("dd/MM/yyyy");
 
-		if (thing instanceof BigDecimal) return format(((BigDecimal) thing).doubleValue(), spec);
-		else if (spec == null) return String.valueOf(thing);
-		else if (spec.contains("%")) return String.format(spec, thing);
-		else switch (spec) {
-			case "short_date":
-			case "sdate": return shortDate.format(thing);
-			case "currency":
-			case "curr": return format(thing, "£ %,.2f");
+    static String format(Object thing, String spec) {
 
-			// Legacy stuff. I want to phase it out someday.
-			case "currp": return String.format("%s p", NumberFormat.getInstance().format((Double) thing * 100));
-			case "currpx": return String.format("%s p", NumberFormat.getInstance().format((Double) thing));
-			default: throw new IllegalArgumentException("Unrecognised format spec: " + spec);
-		}
+        if (thing instanceof BigDecimal)
+            return format(((BigDecimal) thing).doubleValue(), spec);
+        else if (spec == null)
+            return String.valueOf(thing);
+        else if (spec.contains("%"))
+            return String.format(spec, thing);
+        else
+            switch (spec) {
+                case "short_date":
+                case "sdate":
+                    return shortDate.format(thing);
+                case "currency":
+                case "curr":
+                    return format(thing, "£ %,.2f");
 
-	}
-    
+                // Legacy stuff. I want to phase it out someday.
+                case "currp":
+                    return String.format("%s p", NumberFormat.getInstance().format((Double) thing * 100));
+                case "currpx":
+                    return String.format("%s p", NumberFormat.getInstance().format((Double) thing));
+                default:
+                    throw new IllegalArgumentException("Unrecognised format spec: " + spec);
+            }
+
+    }
 
     private static ReferenceType reftype(String address) {
-        
+
         if (ref(address) != null) {
             return ReferenceType.CELL;
         }
 
         String[] parts = address.replace("$", "").split(":");
-        if (parts.length != 2) return ReferenceType.INVALID;
-        
+        if (parts.length != 2)
+            return ReferenceType.INVALID;
+
         try {
             CellReference.convertColStringToIndex(parts[1]);
             // No error means valid column
             return ReferenceType.COLUMN;
+        } catch (Exception e) {
         }
-        catch (Exception e) {}
-        
+
         try {
             Integer.parseInt(parts[1]);
             // No error means valid row
             return ReferenceType.ROW;
+        } catch (Exception e) {
         }
-        catch (Exception e) {}
 
         return ReferenceType.INVALID;
     }
 
-
     private static final String r1c1pattern = "R\\d+C\\d+";
+
     private static CellReference refR1C1(String ref) {
-        if (!(ref = ref.trim()).matches(r1c1pattern)) return null;
+        if (!(ref = ref.trim()).matches(r1c1pattern))
+            return null;
 
         final int cindex = ref.indexOf('C');
         return new CellReference(
-            Integer.parseInt(ref.substring(1, cindex)) - 1, 
-            Short.parseShort(ref.substring(cindex + 1)) - 1
-        );
+                Integer.parseInt(ref.substring(1, cindex)) - 1,
+                Short.parseShort(ref.substring(cindex + 1)) - 1);
     }
 
-
-    private static CellReference ref(String address) {        
+    private static CellReference ref(String address) {
         try {
             return new CellReference(address);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             return refR1C1(address);
         }
-        
+
     }
-    
 
     private static XSSFCell cell(XSSFSheet sheet, String loc) {
         final CellReference ref = ref(loc);
 
         final XSSFRow row = sheet.getRow(ref.getRow());
-        if (row == null) return null;
-        
+        if (row == null)
+            return null;
+
         return row.getCell(ref.getCol());
     }
 
-    
     private static String codename(Sheet sheet) {
         return ((XSSFSheet) sheet).getCTWorksheet().getSheetPr().getCodeName();
     }
-
 
     private static boolean validName(String name) {
         return new Tokeniser(name).nextToken().isAny(TokenType.Qualifier);

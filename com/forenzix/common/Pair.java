@@ -1,7 +1,7 @@
 package com.forenzix.common;
 
 public class Pair<K, V> {
-    
+
     public final K key;
     public final V value;
 

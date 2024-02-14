@@ -1,4 +1,5 @@
 package com.forenzix.interpreter;
+
 /*
  * Token Types
  * 
@@ -6,9 +7,9 @@ package com.forenzix.interpreter;
  * Token belongs in an expression or not. Note that there may be unused types in
  * the current implementation of the Tokeniser.
  */
-public enum TokenType{
+public enum TokenType {
     Qualifier, Keyword, Punctuation, WhiteSpace, Comment,
-    NumberLiteral, StringLiteral, BooleanLiteral, DateLiteral, 
+    NumberLiteral, StringLiteral, BooleanLiteral, DateLiteral,
     BinaryArithmetic, UnaryArithmetic,
     StatementTerminator, ScopeTerminator;
 }

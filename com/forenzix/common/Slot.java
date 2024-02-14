@@ -1,7 +1,7 @@
 package com.forenzix.common;
 
 public class Slot<V> {
-    
+
     public final String key;
     private V value;
 

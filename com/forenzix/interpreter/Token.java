@@ -26,7 +26,7 @@ public class Token {
     static final Token Return = new Token("return", TokenType.Keyword);
     static final Token True = new Token("true", TokenType.BooleanLiteral);
     static final Token False = new Token("false", TokenType.BooleanLiteral);
-    
+
     static final Token Caret = new Token("^", TokenType.BinaryArithmetic, 8, true);
     static final Token Asterisk = new Token("*", TokenType.BinaryArithmetic, 7);
     static final Token ForwardSlash = new Token("/", TokenType.BinaryArithmetic, 7);
@@ -64,11 +64,11 @@ public class Token {
     static final Token DoubleQuote = new Token("\"", TokenType.Punctuation);
     static final Token SingleQuote = new Token("\'", TokenType.Punctuation);
     static final Token EqualSign = new Token("=", TokenType.Punctuation);
-    
+
     static final Token CarriageReturn = new Token("\r", TokenType.WhiteSpace);
     static final Token Tab = new Token("\t", TokenType.WhiteSpace);
     static final Token BackSpace = new Token("\b", TokenType.WhiteSpace);
-    
+
     static final Token Hyphen = new Token("-", Set.of(TokenType.BinaryArithmetic, TokenType.UnaryArithmetic), 6);
     static final Token Exclaim = new Token("!", Set.of(TokenType.Punctuation, TokenType.UnaryArithmetic), 0);
     static final Token SemiColon = new Token(";", Set.of(TokenType.Punctuation, TokenType.StatementTerminator), 0);

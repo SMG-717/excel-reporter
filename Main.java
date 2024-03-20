@@ -247,9 +247,7 @@ public class Main {
         };
 
         // Find the number of contracts according to the template
-        final List<String> specialTags = Extractor.extractTags(template).stream()
-                .filter(s -> s.startsWith("<<<"))
-                .collect(Collectors.toList());
+        final List<String> specialTags = Extractor.extractSpecialTags(template);
 
         int NumberOfContracts = 0;
         for (String tag : specialTags) {
@@ -316,8 +314,13 @@ public class Main {
             vars.putAll(in.value().getGlobalScopeVariables());
         }
 
-        // Save to file
+        // Replace tags
         Replacers.orderedReplace(template, replacers);
+        
+        // Remove unwanted sections
+        Preprocessor.removeSections(template);
+        
+        // Save to file
         template.write(new FileOutputStream(outfile));
         template.close();
 

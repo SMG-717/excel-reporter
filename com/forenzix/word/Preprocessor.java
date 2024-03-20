@@ -1,16 +1,21 @@
 package com.forenzix.word;
 
+import java.util.LinkedList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.poi.poifs.crypt.HashAlgorithm;
 import org.apache.poi.xwpf.usermodel.IBodyElement;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.apache.poi.xwpf.usermodel.XWPFRun;
+import org.apache.poi.xwpf.usermodel.XWPFSDT;
 import org.apache.poi.xwpf.usermodel.XWPFTable;
 import org.apache.poi.xwpf.usermodel.XWPFTableCell;
 import org.apache.poi.xwpf.usermodel.XWPFTableRow;
 import org.apache.xmlbeans.XmlCursor;
+import org.apache.xmlbeans.XmlCursor.TokenType;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTPPr;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTRPr;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTTblPr;
@@ -29,6 +34,8 @@ import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTTrPr;
  */
 public final class Preprocessor {
 
+    private final static Pattern pattern = Pattern.compile("repeat_start_(\\d+)");
+
     // No object instances.
     private Preprocessor() {
         throw new UnsupportedOperationException("No object instances.");
@@ -44,10 +51,23 @@ public final class Preprocessor {
     public static void lock(XWPFDocument doc, String password) {
         doc.enforceReadonlyProtection(password, HashAlgorithm.sha256);
     }
+    
+    /**
+     * Capture all the elements between two specific tags, namely {@code "repeat_start"}
+     * and {@code"repeat_end"}, and create multiple copies of them in a row.
+     * The paragraphs in which these tags exist will be erased from the document
+     * before the document is saved
+     * 
+     * @param doc   document to be processed
+     * @param times the number of times for which the tagged sections shall be
+     *              repeated
+     */
+    public static void repeatSections(XWPFDocument doc) {
+        repeatSections(doc, 1);
+    }
 
     /**
-     * Capture all the elements between two specific tags, namely
-     * {@code "repeat_start"}
+     * Capture all the elements between two specific tags, namely {@code "repeat_start"}
      * and {@code"repeat_end"}, and create multiple copies of them in a row.
      * The paragraphs in which these tags exist will be erased from the document
      * before the document is saved
@@ -57,48 +77,113 @@ public final class Preprocessor {
      *              repeated
      */
     public static void repeatSections(XWPFDocument doc, long times) {
-        XmlCursor cursor;
-        IBodyElement copyable, element;
-        int i, j, k, start, amount;
-
+        
+        int SDTCount = 0;
+        final long original_times = times;
+        
         // Search through the elements of the document
-        for (i = 0, start = 0; i < doc.getBodyElements().size(); i += 1) {
-            if (!((element = doc.getBodyElements().get(i)) instanceof XWPFParagraph))
+        for (int i = 0, start = 0; i < doc.getBodyElements().size(); i += 1) {
+            final IBodyElement element = doc.getBodyElements().get(i);
+
+            if (!(element instanceof XWPFParagraph)) {
+                if (element instanceof XWPFSDT)
+                    SDTCount += 1;
                 continue;
+            }
 
             // ... until a paragraph that contains the tags 'repeat start' or 'repeat end'
             // is found
             final String content = ((XWPFParagraph) element).getText().toLowerCase();
-            if (content.contains("repeat_start"))
+            if (content.contains("repeat_start")) {
                 // Record where the repeated section (tags exclusive) starts
                 start = i + 1;
+                final Matcher match = pattern.matcher(content);
+                if (match.find()) {
+                    try {
+                        times = Integer.parseInt(match.group().substring("repeat_start_".length()));
+                    } catch (NumberFormatException e) {}
+                }
+                else {
+                    times = original_times;
+                }
+            }
 
             else if (content.contains("repeat_end")) {
-                for (k = 1; k < times; k += 1) {
-                    // Start copying from the bottom up
-                    for (j = i - 1; j >= start; j -= 1) {
-                        // Set the cursor right after the current element
-                        (cursor = ((XWPFParagraph) element).getCTP().newCursor()).toNextSibling();
-                        copyable = doc.getBodyElements().get(j);
+                
+    /* 
+     * NOTE: Notice in the next line that SDTCount is considered when locating 
+     * where the cursor should be when copying elements over from 'start' to 
+     * just before the repeat_end tag.
+     * 
+     * This is because I have reasons to believe that the implementation of
+     * insertNewParagraph in XWPFDocument is somewhat faulty. When inserting an 
+     * element at the location of the cursor in the document, it counts the 
+     * number of elements before the cursor and uses that as an offset for 
+     * placing the new bodyElement into the list of its siblings. The bizzare 
+     * thing however is that XWPFSDT (Table of Contents) elements are not 
+     * included in this tally despite being a full body element!
+     * 
+     * This means that for documents that include an SDT, the copied elements
+     * are placed n elements higher in the element list, where n is the number 
+     * of SDT elements seen before the repeat_end tag. SDTs aren't the only
+     * elements that could potentially affect this, but they're simply the only
+     * other objects that implement IBodyElement.
+     * 
+     * I adjust for this difference by selecting an element that overshoots 
+     * repeat_end by a certain amount, and while this solution works for the
+     * meantime, I'm not too sure about its ramifications. While the list of
+     * body elements is now fixed, other lists aren't, like paragraphs and 
+     * tables; they still act as if the copied element is pasted after 
+     * repeat_end. And while I suspect that deleting the repeat_start and end 
+     * tags after the fact rectifies things, I cannot guarantee that it would be
+     * error free.
+     * 
+     * For now, let this wall of text be the first thing another developer
+     * sees when attempting to fix this obscure issue.
+     * 
+     *     - SMG  
+     */  
+                final XmlCursor cursor = newCursor(doc.getBodyElements().get(i + SDTCount));
 
+                for (int k = 0; k < times - 1; k += 1) {
+                    // Start copying from the top down
+                    for (int j = start; j < i; j += 1) {
+                        final IBodyElement copyable = doc.getBodyElements().get(j);
+                        
                         // And clone the copyable element accordingly
                         if (copyable instanceof XWPFParagraph) {
                             cloneParagraph(doc.insertNewParagraph(cursor), (XWPFParagraph) copyable);
                         } else if (copyable instanceof XWPFTable) {
                             cloneTable(doc.insertNewTbl(cursor), (XWPFTable) copyable);
                         }
+
+                        while (cursor.toNextToken() != TokenType.START);
                     }
                 }
-
-                // Remove the repeat start and end tags, then enumerate all the tags properly
-                amount = (i - start) * ((int) times - 1);
+                
+                // Enumerate all tags
+                int amount = (i - start) * ((int) times - 1);
+                enumerateElements(doc.getBodyElements().subList(start, i + amount), i - start);
+                
+                // And remove the start and end tags
                 doc.removeBodyElement(i + amount);
                 doc.removeBodyElement(start - 1);
-                enumerateElements(doc.getBodyElements().subList(start - 1, i + amount), i - start);
 
                 // Advance past the copied section.
                 i += amount - 2;
             }
+        }
+    }
+
+    private static XmlCursor newCursor(IBodyElement e) {
+        if (e instanceof XWPFParagraph) {
+            return ((XWPFParagraph) e).getCTP().newCursor();
+        }
+        else if (e instanceof XWPFTable) {
+            return ((XWPFTable) e).getCTTbl().newCursor();
+        }
+        else {
+            return null;
         }
     }
 
@@ -163,33 +248,43 @@ public final class Preprocessor {
 
         return clone;
     }
-
+    
+    static final int WAITING = 0, ACTIVE = 1, OPENING = 2, CLOSING = 3, SETTING = 4;
     private static void enumerateParagraph(XWPFParagraph p, int ordinal) {
+        /*
+         * States:
+         *   Waiting - waiting for a tag opening '<<'
+         *   Opening - a '<' has been seen, so now we are expecting a second one
+         *   Active  - waiting for a 'C' or a '>>'; we are now in a tag string
+         *   Closing - a '>' has been seen, so now we are expecting a second one
+         *   Setting - a 'C' has been seen, so now we will replace the next 
+         *             character with the ordinal if it is an 'N' 
+         */
 
         if (ordinal <= 0)
             return;
 
-        boolean permit = false;
-        for (int r = 0; r < p.getRuns().size(); r += 1) {
-            XWPFRun run = p.getRuns().get(r);
-
-            // Potential issue
-            if (run.text().contains("<<"))
-                permit = true;
-            else if (run.text().contains(">>"))
-                permit = false;
-
-            if (!permit)
-                continue;
-            if (run.text().contains("CN")) {
-                run.setText(run.text().replace("CN", "C" + ordinal), 0);
+        int state = WAITING;
+        final LinkedList<XWPFRun> openlist = new LinkedList<>(p.getRuns());
+        while (!openlist.isEmpty()) {
+            final XWPFRun run = openlist.pop();
+            final StringBuilder builder = new StringBuilder(run.text());
+            for (int i = 0; i < builder.length(); i += 1) {
+                final char c = builder.charAt(i);
+                switch (state) {
+                    case WAITING: state = c == '<' ? OPENING : WAITING; break;
+                    case OPENING: state = c == '<' ? ACTIVE : WAITING; break;
+                    case ACTIVE: state = c == '>' ? CLOSING : (c == 'C' ? SETTING : ACTIVE); break;
+                    case CLOSING: if (c == '>') state = WAITING; else { state = ACTIVE; i -= 1; } break;
+                    case SETTING: 
+                        if (c == 'N') {
+                            builder.deleteCharAt(i);
+                            builder.insert(i, ordinal);
+                        }
+                        else i -= 1; state = ACTIVE;
+                }
             }
-
-            // Edge Case: One run ends with C, followed by a run that starts with N.
-            if (r < p.getRuns().size() - 1 && run.text().endsWith("C")
-                    && p.getRuns().get(r + 1).text().startsWith("N")) {
-                p.getRuns().get(r + 1).setText(ordinal + run.text().substring(1), 0);
-            }
+            run.setText(builder.toString(), 0);
         }
     }
 
@@ -210,6 +305,32 @@ public final class Preprocessor {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    
+    /**
+     * Capture all the elements between two specific tags, namely {@code "remove_start"} 
+     * and {@code"remove_end"}, and eliminate them from the document. The paragraphs 
+     * in which these tags exist will similarly be erased from the document
+     * before the it is saved
+     * 
+     * @param doc   document to be processed
+     */
+    public static void removeSections(XWPFDocument doc) {
+        for (int i = 0, start = 0; i < doc.getBodyElements().size(); i += 1) {
+            IBodyElement element = doc.getBodyElements().get(i);
+            if (!(element instanceof XWPFParagraph))
+                continue;
+
+            final String content = ((XWPFParagraph) element).getText().toLowerCase();
+            if (content.contains("remove_start"))
+                start = i;
+
+            else if (content.contains("remove_end")) {
+                for (int j = i; j >= start; doc.removeBodyElement(j--));
+                i = start;
             }
         }
     }

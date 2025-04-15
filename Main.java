@@ -1,3 +1,4 @@
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -7,6 +8,7 @@ import java.text.DateFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -14,6 +16,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -58,7 +63,10 @@ public class Main {
             ANSI_CYAN = "\u001B[36m",
             ANSI_WHITE = "\u001B[37m";
 
+    public static int MAX_THREAD_COUNT = 0; // Set to 0 to disable multi-threading
+
     public static void main(String[] args) throws IOException {
+        final Date start = new Date();
         try {
             mainProcedure(args);
         } catch (Exception e) {
@@ -66,6 +74,7 @@ public class Main {
             e.printStackTrace();
         }
 
+        System.out.println("Total time taken: %.2f seconds".formatted((new Date().getTime() - start.getTime()) / 1000.0D));
         System.out.print("Press Enter to close this window.");
         System.out.print(ANSI_RESET);
         final Scanner scan = new Scanner(System.in);
@@ -74,64 +83,229 @@ public class Main {
         System.exit(0);
     }
 
-    public static Map<String, String> parseArgs(String[] args) {
-        final Map<String, String> argmap = new HashMap<>();
-        for (int i = 0; i < args.length; i += 1) {
-            if (args[i].startsWith("-")) {
-                if (args[i].equals("-t") || args[i].equals("-template")) {
-                    argmap.put("t", args[i += 1]);
+    public static Map<String, List<String>> parseArgs(String[] args) {
+        final Map<String, List<String>> argmap = new HashMap<>();
+        String state = "a";
+        for (String arg : args) {
+            if (arg.startsWith("-")) {
+                switch (arg) {
+                    case "-t":
+                    case "-template":
+                        state = "t";
+                        break;
+                    case "-m":
+                    case "-multi-thred":
+                        state = "m";
+                        break;
+                    case "-c":
+                    case "-calc":
+                        state = "c";
+                        break;
+                    case "-o":
+                    case "-out":
+                    case "-output":
+                        state = "o";
+                        break;
+                    case "-v":
+                    case "-version":
+                        System.out.println("excelr v" + VERSION);
+                        System.exit(0);
+                        break;
+                    default:
+                        throw new IllegalArgumentException("Unknown argument: %s".formatted(arg));
                 }
-                if (args[i].equals("-c") || args[i].equals("-calc")) {
-                    argmap.put("c", args[i += 1]);
-                }
-                if (args[i].equals("-o") || args[i].equals("-out") || args[i].equals("-output")) {
-                    argmap.put("o", args[i += 1]);
-                }
-                if (args[i].equals("-v") || args[i].equals("-version")) {
-                    // If version number is requested, abort everything
-                    // and simply print the version number
-                    System.out.println("excelr v" + VERSION);
-                    System.exit(0);
-                }
+                continue;
             }
+            
+            switch (state) {
+                case "t":
+                    argmap.computeIfAbsent(state, _k -> new ArrayList<String>()).add(arg);
+                    state = "a";
+                    break;
+                case "c":
+                case "o":
+                    argmap.computeIfAbsent(state, _k -> new ArrayList<String>()).add(arg);
+                    break;
+                case "m":
+                    argmap.computeIfAbsent(state, _k -> new ArrayList<String>()).add(arg);
+                    state = "a";
+                    break;
+                default:
+                    throw new IllegalArgumentException();
+            }
+        }
+
+        /* if (argmap.get("c").size() != argmap.get("o").size()) {
+            throw new IllegalArgumentException("The input size does not match the output size");
+        }
+        else */ if (argmap.get("t").size() != 1) {
+            throw new IllegalArgumentException("One template must be provided at most");
+        }
+
+        if (argmap.containsKey("m") && argmap.get("m").size() >= 1) {
+            MAX_THREAD_COUNT = Integer.parseInt(argmap.get("m").get(0));
         }
 
         return argmap;
     }
 
-    public static void mainProcedure(String[] args) throws IOException {
+    public static void mainProcedure(String[] args) throws IOException, InterruptedException {
 
-        final String wbfile, docfile, outfile;
-        final Map<String, String> argmap = parseArgs(args);
+        final String docfile;
+        final List<String> wbfiles, outfiles;
+        final Map<String, List<String>> argmap = parseArgs(args);
 
-        if ((docfile = argmap.get("t")) == null || (wbfile = argmap.get("c")) == null) {
+        if ((docfile = argmap.get("t").get(0)) == null || (wbfiles = argmap.get("c")).size() == 0) {
             System.out.println(
-                    ANSI_RED +
-                            "The template and workbook files were not supplied correctly\n." +
-                            "Please use the format: java app -t <template location> -c <calculator location> [-o <report destination>]"
-                            + ANSI_RESET);
+                ANSI_RED +
+                "The template and workbook files were not supplied correctly\n." +
+                "Please use the format: java app -t <template> -c <calculator(s)> [-o <destination(s)>]" +
+                ANSI_RESET
+            );
 
             throw new IllegalArgumentException("One or more required files was null");
         }
 
-        if (argmap.get("o") == null)
-            outfile = Paths.get(docfile).getParent().toString() + "\\output.docx";
-        else
-            outfile = argmap.get("o");
+        if (argmap.get("o") == null) {
+            outfiles = wbfiles.stream()
+                .map((wb) -> {
+                    final String name = Paths.get(wb).getFileName().toString();
+                    final String basename = name.substring(0, name.lastIndexOf("."));
+                    final String parent = wb.substring(0, wb.length() - name.length());
+                    return parent + basename + " output.docx";
+                })
+                .collect(Collectors.toList());
+        }
+        else {
+            outfiles = argmap.get("o");
+        }
+
+        final List<Thread> threads = new ArrayList<>();
+        final boolean singleReport = wbfiles.size() == 1;
+        if (!singleReport) System.out.println("Generating %d reports.".formatted(wbfiles.size()));
+        if (MAX_THREAD_COUNT > 0) System.out.println("Using %d threads.".formatted(MAX_THREAD_COUNT));
+        for (int i = 0; i < wbfiles.size(); i += 1) {
+            final String wb = wbfiles.get(i), out = outfiles.get(i);
+            final Supplier<Void> runner = () -> {
+                try {
+                    produceReport(wb, out, docfile, singleReport);
+                    System.out.println(ANSI_GREEN + "Report '%s' generated successfully.".formatted(out) + ANSI_RESET);
+                }
+                catch (IOException e) {
+                    if (!singleReport) System.out.println(ANSI_RED + "Report '%s' failed. Run independently to get more details.".formatted(out) + ANSI_RESET);
+                    else e.printStackTrace();
+                }
+                return null;
+            };
+
+            if (MAX_THREAD_COUNT != 0) {
+                while (threads.size() >= MAX_THREAD_COUNT) {
+                    Thread thread = threads.removeFirst();
+                    thread.join();
+                }
+                final Thread thread = new Thread(new Runnable() { public void run() { runner.get(); } });
+                thread.start();
+                threads.add(thread);
+            } 
+            else {
+                runner.get();
+            }
+        }
+
+        for (Thread thread : threads)
+            thread.join();
+    }
+
+    
+    final static Object 
+    TOSTRINGIFY = new Object(),
+    STRINGIFY = new Object(),
+    DATEIFY = new Object(),
+    INTIFY = new Object(),
+    NUMIFY = new Object(),
+    BOOLIFY = new Object(),
+    ROW = new Object(),
+    COLUMN = new Object(),
+    FORMULIFY = new Object(),
+    DUPLICATE_NAME = new Object();
+
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    final static Function<Slot<Interpreter>, MemberAccessor<Object, String, Object>> makeMaccess = (in) -> (obj, member) -> {
+        if (obj instanceof Pair) {
+            final Pair<Sheet, Map<String, XSSFCell>> sheetPair = (Pair) obj;
+
+            // There are multiple ways to access data in an Excel sheet
+            // 1. It is a named range
+            if (sheetPair.value.containsKey(member)) {
+                return sheetPair.value.get(member);
+            }
+
+            // 2. The given member is a variable that contains a valid address
+            final Object memVal = in.value().findVariable(member).orElse(Map.of()).get(member);
+            if (memVal != null && memVal instanceof String && reftype((String) memVal) == ReferenceType.CELL) {
+                return cell((XSSFSheet) sheetPair.key, (String) memVal);
+            }
+
+            // 3. It is a valid cell reference (eg. Home.A1)
+            if (reftype(member) == ReferenceType.CELL) {
+                return cell((XSSFSheet) sheetPair.key, member);
+            }
+
+            throw new IllegalArgumentException("Sheet member \"" + member +
+                    "\" is not a defined name, or a valid cell address (like A1).");
+        }
+
+        final Object thing = in.value().getVariable(member);
+        if (obj == TOSTRINGIFY) {
+            return String.valueOf(thing);
+        }
+
+        if (thing instanceof XSSFCell) {
+            final XSSFCell cell = (XSSFCell) thing;
+
+            if (obj == INTIFY
+                    && (cell.getCellType() == CellType.NUMERIC || cell.getCellType() == CellType.FORMULA)) {
+                return ((Double) cell.getNumericCellValue()).intValue();
+            } else if (obj == NUMIFY
+                    && (cell.getCellType() == CellType.NUMERIC || cell.getCellType() == CellType.FORMULA)) {
+                return cell.getNumericCellValue();
+            } else if (obj == DATEIFY
+                    && (cell.getCellType() == CellType.NUMERIC || cell.getCellType() == CellType.FORMULA)) {
+                return cell.getDateCellValue();
+            } else if (obj == BOOLIFY
+                    && (cell.getCellType() == CellType.BOOLEAN || cell.getCellType() == CellType.FORMULA)) {
+                return cell.getBooleanCellValue();
+            } else if (obj == STRINGIFY) {
+                return cell.getStringCellValue();
+            } else if (obj == FORMULIFY && cell.getCellType() == CellType.FORMULA) {
+                return cell.getCellFormula();
+            } else if (obj == ROW)
+                return cell.getRowIndex() + 1;
+            else if (obj == COLUMN)
+                return cell.getColumnIndex() + 1;
+        }
+
+        else if (thing instanceof Double && obj == INTIFY) {
+            return ((Double) thing).intValue();
+        }
+
+        return null;
+    };
+
+    public static void produceReport(String wbfile, String outfile, String docfile, boolean printLogs) throws FileNotFoundException, IOException {
 
         final XSSFWorkbook workbook;
         final XWPFDocument template;
         final List<XSSFName> xssfnames;
         final Iterator<Sheet> sheetItr;
         final List<String> tags;
-        final MemberAccessor<Object, String, Object> maccess;
-        // final MemberUpdater<Object, String, Object> mupdate; // No mupdating here.
-
+        
         final Map<String, Object> vars = new HashMap<>();
         final Slot<Interpreter> in = Slot.of("interpreter", null);
-        final Object TOSTRINGIFY, STRINGIFY, DATEIFY, INTIFY, NUMIFY, BOOLIFY,
-                ROW, COLUMN, FORMULIFY, DUPLICATE_NAME = new Object();
         final List<Replacer> replacers = new LinkedList<>();
+
+        // final MemberUpdater<Object, String, Object> mupdate; // No mupdating here.
+        final var maccess = makeMaccess.apply(in);
 
         template = new XWPFDocument(Files.newInputStream(Paths.get(docfile)));
         workbook = new XSSFWorkbook(wbfile);
@@ -155,6 +329,7 @@ public class Main {
                 final int row = ref.getRow(), col = ref.getCol();
 
                 // I'll get rid of the warning. Eventually... -SMG
+                @SuppressWarnings("unchecked")
                 final Map<String, XSSFCell> sheet = (((Pair<Sheet, HashMap<String, XSSFCell>>) vars.get(sname))).value;
                 final XSSFCell cell = workbook.getSheet(sname).getRow(row).getCell(col);
 
@@ -171,79 +346,17 @@ public class Main {
 
         workbook.close();
 
-        vars.put("str", STRINGIFY = new Object());
-        vars.put("tostr", TOSTRINGIFY = new Object());
-        vars.put("date", DATEIFY = new Object());
-        vars.put("int", INTIFY = new Object());
-        vars.put("num", NUMIFY = new Object());
-        vars.put("bool", BOOLIFY = new Object());
-        vars.put("row", ROW = new Object());
-        vars.put("col", COLUMN = new Object());
-        vars.put("formula", FORMULIFY = new Object());
+        vars.put("str", STRINGIFY);
+        vars.put("tostr", TOSTRINGIFY);
+        vars.put("date", DATEIFY);
+        vars.put("int", INTIFY);
+        vars.put("num", NUMIFY);
+        vars.put("bool", BOOLIFY);
+        vars.put("row", ROW);
+        vars.put("col", COLUMN);
+        vars.put("formula", FORMULIFY);
         vars.put("f", FORMULIFY);
         vars.put("Now", Date.from(Instant.now()));
-
-        maccess = (obj, member) -> {
-            if (obj instanceof Pair) {
-                final Pair<Sheet, Map<String, XSSFCell>> sheetPair = (Pair) obj;
-
-                // There are multiple ways to access data in an Excel sheet
-                // 1. It is a named range
-                if (sheetPair.value.containsKey(member)) {
-                    return sheetPair.value.get(member);
-                }
-
-                // 2. The given member is a variable that contains a valid address
-                final Object memVal = in.value().findVariable(member).orElse(Map.of()).get(member);
-                if (memVal != null && memVal instanceof String && reftype((String) memVal) == ReferenceType.CELL) {
-                    return cell((XSSFSheet) sheetPair.key, (String) memVal);
-                }
-
-                // 3. It is a valid cell reference (eg. Home.A1)
-                if (reftype(member) == ReferenceType.CELL) {
-                    return cell((XSSFSheet) sheetPair.key, member);
-                }
-
-                throw new IllegalArgumentException("Sheet member \"" + member +
-                        "\" is not a defined name, or a valid cell address (like A1).");
-            }
-
-            final Object thing = in.value().getVariable(member);
-            if (obj == TOSTRINGIFY) {
-                return String.valueOf(thing);
-            }
-
-            if (thing instanceof XSSFCell) {
-                final XSSFCell cell = (XSSFCell) thing;
-
-                if (obj == INTIFY
-                        && (cell.getCellType() == CellType.NUMERIC || cell.getCellType() == CellType.FORMULA)) {
-                    return ((Double) cell.getNumericCellValue()).intValue();
-                } else if (obj == NUMIFY
-                        && (cell.getCellType() == CellType.NUMERIC || cell.getCellType() == CellType.FORMULA)) {
-                    return cell.getNumericCellValue();
-                } else if (obj == DATEIFY
-                        && (cell.getCellType() == CellType.NUMERIC || cell.getCellType() == CellType.FORMULA)) {
-                    return cell.getDateCellValue();
-                } else if (obj == BOOLIFY
-                        && (cell.getCellType() == CellType.BOOLEAN || cell.getCellType() == CellType.FORMULA)) {
-                    return cell.getBooleanCellValue();
-                } else if (obj == STRINGIFY) {
-                    return cell.getStringCellValue();
-                } else if (obj == FORMULIFY && cell.getCellType() == CellType.FORMULA) {
-                    return cell.getCellFormula();
-                } else if (obj == ROW)
-                    return cell.getRowIndex() + 1;
-                else if (obj == COLUMN)
-                    return cell.getColumnIndex() + 1;
-            }
-
-            else if (thing instanceof Double && obj == INTIFY) {
-                return ((Double) thing).intValue();
-            }
-
-            return null;
-        };
 
         // Find the number of contracts according to the template
         final List<String> specialTags = Extractor.extractSpecialTags(template);
@@ -304,9 +417,9 @@ public class Main {
                 if (tag.contains("\n")) {
                     tag = tag.substring(0, Math.min(tag.indexOf('\n'), 16)) + "...\\n>>";
                 }
-                System.out.println(tag + " -> " + result.trim());
+                if (printLogs) System.out.println(tag + " -> " + result.trim());
             } catch (Exception e) {
-                report(e, tag);
+                if (printLogs) report(e, tag);
             }
 
             // Update our variables so we can have persistance across tag executions.
@@ -320,12 +433,12 @@ public class Main {
         Preprocessor.removeSections(template);
         
         // Save to file
-        template.write(new FileOutputStream(outfile));
-        template.close();
-
-        System.out.println(ANSI_GREEN + "Operation Successful! Report was generated into " + outfile);
+        try (final FileOutputStream fs = new FileOutputStream(outfile)) {
+            template.write(fs);
+            template.close();
+        }
     }
-
+ 
     static Replacer replacer(String bookmark, String replacement) {
         return Replacer.of(bookmark, replacement);
     }

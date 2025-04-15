@@ -6,34 +6,44 @@
     "configurations": [
         {
             "type": "java",
-            "name": "Main2",
-            "request": "launch",
-            "mainClass": "Main2",
-            "projectName": "excel-reporter_b2ac6549",
-            "args": [
-                "-t",
-                "C:\\Dev\\excel-reporter\\test\\template2.docx",
-                "-c",
-                "C:\\Dev\\excel-reporter\\test\\calc.xlsm",
-                "-o",
-                "C:\\Dev\\excel-reporter\\test\\out.docx",
-                // "-v"
-            ]
-        },
-        {
-            "type": "java",
             "name": "Main",
             "request": "launch",
             "mainClass": "Main",
-            "projectName": "excel-reporter_b2ac6549",
+            "projectName": "excel-reporter_b2ac6549"
+        },
+        {
+            "type": "java",
+            "name": "Launch with Arguments Prompt",
+            "request": "launch",
+            "mainClass": "",
             "args": [
                 "-t",
-                "C:\\Dev\\excel-reporter\\test\\template.docx",
+                ".\\test\\template.docx",
                 "-c",
-                "C:\\Dev\\excel-reporter\\test\\calc.xlsm",
-                "-o",
-                "C:\\Dev\\excel-reporter\\test\\out.docx",
-                // "-v"
+                ".\\test\\calc 0.xlsx",
+                ".\\test\\calc 1.xlsx",
+                ".\\test\\calc 2.xlsx",
+                ".\\test\\calc 3.xlsx",
+                ".\\test\\calc 4.xlsx",
+                ".\\test\\calc 5.xlsx",
+                ".\\test\\calc 6.xlsx",
+                ".\\test\\calc 7.xlsx",
+                ".\\test\\calc 8.xlsx",
+                ".\\test\\calc 9.xlsx",
+                ".\\test\\calc 10.xlsx",
+                ".\\test\\calc 11.xlsx",
+                ".\\test\\calc 12.xlsx",
+                ".\\test\\calc 13.xlsx",
+                ".\\test\\calc 14.xlsx",
+                ".\\test\\calc 15.xlsx",
+                ".\\test\\calc 16.xlsx",
+                ".\\test\\calc 17.xlsx",
+                ".\\test\\calc 18.xlsx",
+                ".\\test\\calc 19.xlsx",
+                "-m",
+                "50",
+                // "-o",
+                // ".\\test\\out.docx"
             ]
         },
         {

@@ -7,6 +7,7 @@ import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
@@ -16,8 +17,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.apache.poi.ss.usermodel.CellType;
@@ -29,6 +32,7 @@ import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.openxmlformats.schemas.spreadsheetml.x2006.main.CTSheetPr;
 
 import com.forenzix.common.Pair;
 import com.forenzix.common.Slot;
@@ -52,7 +56,7 @@ import com.forenzix.word.Replacers;
  */
 public class Main {
 
-    public static final String VERSION = "1.1";
+    public static final String VERSION = "1.3";
     public static final String ANSI_RESET = "\u001B[0m",
             ANSI_BLACK = "\u001B[30m",
             ANSI_RED = "\u001B[31m",
@@ -66,7 +70,7 @@ public class Main {
     public static int MAX_THREAD_COUNT = 0; // Set to 0 to disable multi-threading
 
     public static void main(String[] args) throws IOException {
-        final Date start = new Date();
+        final long start = System.nanoTime();
         try {
             mainProcedure(args);
         } catch (Exception e) {
@@ -74,7 +78,8 @@ public class Main {
             e.printStackTrace();
         }
 
-        System.out.println("Total time taken: %.2f seconds".formatted((new Date().getTime() - start.getTime()) / 1000.0D));
+        final Duration elapsed = Duration.ofNanos(System.nanoTime() - start);
+        System.out.println("Total time taken: %d.%03d seconds".formatted(elapsed.toSeconds(), elapsed.toMillisPart()));
         System.out.print("Press Enter to close this window.");
         System.out.print(ANSI_RESET);
         final Scanner scan = new Scanner(System.in);
@@ -180,40 +185,23 @@ public class Main {
             outfiles = argmap.get("o");
         }
 
-        final List<Thread> threads = new ArrayList<>();
+        final List<ReporterInstance> tasks = new ArrayList<>();
         final boolean singleReport = wbfiles.size() == 1;
-        if (!singleReport) System.out.println("Generating %d reports.".formatted(wbfiles.size()));
-        if (MAX_THREAD_COUNT > 0) System.out.println("Using %d threads.".formatted(MAX_THREAD_COUNT));
         for (int i = 0; i < wbfiles.size(); i += 1) {
             final String wb = wbfiles.get(i), out = outfiles.get(i);
-            final Supplier<Void> runner = () -> {
-                try {
-                    produceReport(wb, out, docfile, singleReport);
-                    System.out.println(ANSI_GREEN + "Report '%s' generated successfully.".formatted(out) + ANSI_RESET);
-                }
-                catch (IOException e) {
-                    if (!singleReport) System.out.println(ANSI_RED + "Report '%s' failed. Run independently to get more details.".formatted(out) + ANSI_RESET);
-                    else e.printStackTrace();
-                }
-                return null;
-            };
-
-            if (MAX_THREAD_COUNT != 0) {
-                while (threads.size() >= MAX_THREAD_COUNT) {
-                    Thread thread = threads.removeFirst();
-                    thread.join();
-                }
-                final Thread thread = new Thread(new Runnable() { public void run() { runner.get(); } });
-                thread.start();
-                threads.add(thread);
-            } 
-            else {
-                runner.get();
-            }
+            tasks.add(new ReporterInstance(wb, out, docfile, singleReport));
         }
 
-        for (Thread thread : threads)
-            thread.join();
+        if (!singleReport) System.out.println("Generating %d reports.".formatted(wbfiles.size()));
+        if (MAX_THREAD_COUNT > 1) System.out.println("Using %d threads.".formatted(MAX_THREAD_COUNT));
+        final ExecutorService ex = Executors.newFixedThreadPool(Math.max(MAX_THREAD_COUNT, 1));
+        try {
+            ex.invokeAll(tasks);
+            ex.shutdown();
+        }
+        catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     
@@ -543,10 +531,40 @@ public class Main {
     }
 
     private static String codename(Sheet sheet) {
-        return ((XSSFSheet) sheet).getCTWorksheet().getSheetPr().getCodeName();
+        final CTSheetPr sheetPr = ((XSSFSheet) sheet).getCTWorksheet().getSheetPr();
+        if (sheetPr == null) {
+            return ((XSSFSheet) sheet).getSheetName();
+        }
+        return sheetPr.getCodeName();
     }
 
     private static boolean validName(String name) {
         return new Tokeniser(name).nextToken().isAny(TokenType.Qualifier);
+    }
+}
+
+
+class ReporterInstance implements Callable<Void> {
+    String wb, out, docfile;
+    boolean singleReport;
+
+    ReporterInstance(String wb, String out, String docfile, boolean singleReport) {
+        this.wb = wb;
+        this.out = out;
+        this.docfile = docfile;
+        this.singleReport = singleReport;
+    }
+
+    @Override
+    public Void call() throws Exception {
+        try {
+            Main.produceReport(wb, out, docfile, singleReport);
+            System.out.println(Main.ANSI_GREEN + "Report '%s' generated successfully.".formatted(out) + Main.ANSI_RESET);
+        }
+        catch (IOException e) {
+            if (!singleReport) System.out.println(Main.ANSI_RED + "Report '%s' failed. Run independently to get more details.".formatted(out) + Main.ANSI_RESET);
+            else e.printStackTrace();
+        }
+        return null;
     }
 }

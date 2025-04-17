@@ -33,189 +33,26 @@ import com.forenzix.interpreter.Interpreter.MemberUpdater;
  */
 public final class Replacers {
 
-	private static final DateFormat SHORT_DATE_FMT = new SimpleDateFormat("dd/MM/yyyy");
-    
-    // Mendix Specifc Method
-	/**
-	 * Extract tags from the input document then use the claim object alond with
-	 * its associate objects to find corresponding values for every tag. Contracts
-	 * will be included as higher level objects in the interpreter instances and
-	 * are aliased 'CN' where N is the index of contract. Note that when higher
-	 * level objects are involved, MemberAccess and MemberUpdate handlers need to
-	 * be defined for the interpreter to have any functionality for them. 
-	 * <p>
-	 * Calc object members are included in the interpreter instance as if they're
-	 * direct members of their associated parent. For example, claim-level quantum
-	 * members have variables that reference them directly, and contract-level
-	 * quantum members can be accessed through the associated CN object.
-	 * 
-	 * @param doc		the input document to generate replacers for
-	 * @param claim		the claim object from which data will be sourced
-	 * @param context	context object for mendix calls
-	 * @return 			list of replacers
-	 * @see {@link Interpreter}
-	 */
-    // @SuppressWarnings({"unchecked", "rawtypes"})
-    // public static List<Replacer> generateReplacers(List<String> tags, Claim claim, IContext context) {
-	// 	// Initialise the variable map
-	// 	final Map<String, Object> vars = new HashMap<>();
-		
-	// 	// Calculation objects also have their members included in calculation.
-	// 	// This could run into an issue if claim/contract and calc objects have
-	// 	// members that are identically named.
-        
-	// 	final IMendixObject claimCalc = Microflows.get_ClaimCalc(context, claim).getMendixObject();
-	// 	final Map<IMendixIdentifier, IMendixObject> contractCalcs = new HashMap<>();
+    private static final DateFormat SHORT_DATE_FMT = new SimpleDateFormat("dd/MM/yyyy");
 
-    //     final List<Contract> contracts = Core.createXPathQuery("//Calculators.Contract[Calculators.Contract_Claim = $claim]")
-    //         .setVariable("claim", claim.getMendixObject().getId())
-    //         .execute(context).stream()
-    //         .map(m -> Contract.initialize(context, m))
-    //         .collect(Collectors.toList());
-
-    //     if (Core.isSubClassOf(calculators.proxies.CCL_BEC_S1.entityName, claim.getMendixObject().getType())) {
-    //         final List<BEC_Assumption> assumptions = Core.createXPathQuery("//Calculators.BEC_Assumption")
-    //             .execute(context).stream()
-    //             .map(m -> BEC_Assumption.initialize(context, m))
-    //             .collect(Collectors.toList());
-
-    //         int aCounter = 0;
-    //         for (BEC_Assumption a : assumptions) {
-    //             final List<IMendixIdentifier> cIds = contracts
-    //                 .stream()
-    //                 .map(c -> c.getMendixObject().getId())
-    //                 .collect(Collectors.toList());
-
-    //             final LinkedList<String> involvedIds = new LinkedList<>();
-    //             final Set<IMendixIdentifier> aLinks = ((List<IMendixIdentifier>) a.getMendixObject()
-    //                 .getValue(context, "Calculators.Contract_Assumptions"))
-    //                 .stream()
-    //                 .collect(Collectors.toSet());
-    //             for (int i = 0; i < cIds.size(); i += 1) {
-    //                 if (aLinks.contains(cIds.get(i))) {
-    //                     involvedIds.add(Integer.toString(i + 1));
-    //                 }
-    //             }
-
-    //             if (involvedIds.size() == 1) {
-    //                 vars.put("Assumption_C" + (aCounter += 1), a.getDetails().replace("<<CN>>", involvedIds.getFirst()));
-    //             }
-    //             else if (!involvedIds.isEmpty()) {
-    //                 final String last = involvedIds.removeLast();
-    //                 vars.put("Assumption_C" + (aCounter += 1), a.getDetails().replace("<<CN>>", String.join(", ", involvedIds) + " & " + last));
-    //             }
-    //         }
-    //         vars.put("Assumption_Count", aCounter);
-    //     }
-        
-
-		
-	// 	// Couldn't figure how the hell to write the types for this, so whatever.
-	// 	final Set claimMembers = new HashSet<>(claim.getMendixObject().getMembers(context).entrySet());
-	// 	claimMembers.addAll(claimCalc.getMembers(context).entrySet());
-	// 	for (var entry : (Set<Map.Entry<String, IMendixObjectMember<?>>>) claimMembers) {
-	// 		final String memName = entry.getKey();
-	// 		final Object memVal = entry.getValue().getValue(context);
-	// 		vars.put(memName, memVal);
-	// 	}
-		
-	// 	// Contracts are represented by a handful of variables of the form 'CN'.
-	// 	// They also get a corresponding Ordinal object for display purposes.
-	// 	// Though now that the reporting function uses interpreters and variables
-	// 	// can persist through tags, Ord objects are getting more and more obselete.
-	// 	for (int i = 0; i < contracts.size(); i += 1) {
-	// 		final Contract contract = contracts.get(i);
-	// 		vars.put(String.format("C%d", i + 1), contract.getMendixObject());
-	// 		vars.put(String.format("C%d_Ord", i + 1), i + 1);
-
-	// 		contractCalcs.put(contract.getMendixObject().getId(), Microflows.get_ContractCalc(context, contract).getMendixObject());
-	// 	}
-
-	// 	// Additional custom variables
-	// 	final Account user = usermanagement.proxies.microflows.Microflows.get_User_Account(context);
-	// 	vars.put("CurrentDateUTC", Date.from(Instant.now()));
-	// 	if (user != null && user.getFullName() != null) {
-	// 		final String name = user.getFullName();
-
-	// 		vars.put("User_Name_FullName", name);
-	// 		vars.put("User_Name_Initials", Arrays.asList(name.split("\\s+")).stream()
-	// 			.map(s -> s.substring(0, 1))
-	// 			.reduce((acc, word) -> acc + "." + word)
-	// 			.get().toUpperCase());
-	// 	}
-	// 	else {
-	// 		vars.put("User_Name_FullName", "");
-	// 		vars.put("User_Name_Initials", "");
-	// 	}
-        
-		
-	// 	final MemberAccessor<Object, String, Object> maccess = (object, member) -> {
-	// 		// When accessing object members, we check first if the member exists
-	// 		// in an associated calc object. This calc object is then used instead
-	// 		// as the primary object for this operation.
-	// 		IMendixObject mcalc, mobject = (IMendixObject) object;
-	// 		if (contractCalcs.containsKey(mobject.getId()) && (mcalc = contractCalcs.get(mobject.getId())).hasMember(member)) {
-	// 			mobject = mcalc;
-	// 		}
-
-	// 		final Object value;
-	// 		final IMendixObjectMember<?> remember = mobject.getMember(context, member);
-
-	// 		// If the member is an enum, we want to get its I18N value for display purposes.
-	// 		if (remember instanceof MendixEnum) {
-	// 			value = Core.getInternationalizedString(
-	// 				context, 
-	// 				((MendixEnum) remember).getEnumeration()
-	// 					.getEnumValues()
-	// 					.get(remember.getValue(context))
-	// 					.getI18NCaptionKey()
-	// 			);
-	// 		}
-	// 		else {
-	// 			value = mobject.getValue(context, member);
-	// 		}
-
-	// 		try {
-	// 			// If our member points to another object, we grab and return it.
-	// 			return value instanceof IMendixIdentifier ? Core.retrieveId(context, (IMendixIdentifier) value) : value;
-	// 		} 
-	// 		catch (CoreException ce) { 
-	// 			throw new IllegalArgumentException(String.format(
-	// 				"Failed to retrieve object with ID %d from Database",
-	// 				((IMendixIdentifier) value).toLong()
-	// 			)); 
-	// 		}
-	// 	};
-		
-	// 	// Updating members is direct
-	// 	final MemberUpdater<Object, String, Object> mupdate = (object, member, value) -> {
-	// 		((IMendixObject) object).setValue(context, member, value instanceof IMendixObject ? 
-	// 			((IMendixObject) value).getId() : value
-	// 		);
-	// 	};
-
-    //     return generateReplacers(tags, maccess, mupdate, vars);
-    // }
-
-    
-	/**
-	 * Generate Replacers from a given list of tags.  
-	 * 
-	 * @param doc
-	 * @param tags
-	 * @return
-	 */
+    /**
+     * Generate Replacers from a given list of tags.
+     * 
+     * @param doc
+     * @param tags
+     * @return
+     */
     public static List<Replacer> generateReplacers(List<String> tags) {
-		return generateReplacers(tags, null, null, null);
-	}
-	
+        return generateReplacers(tags, null, null, null);
+    }
+
     /**
      * Generate replacers from a given list of tags. MemberAccess and MemberUpdate
      * functions can be provided to instruct the interpreter on how to handle the
      * corresponding events. The set of global variables can be initialised through
      * the inVars parameter. The tags provided must be valid tags and cannot start
      * with any number of (<) characters that is not 2 or 3. Tags can contain
-     * format specifications as defined by {@link Replacers#format(Object, String) 
+     * format specifications as defined by {@link Replacers#format(Object, String)
      * Replacers.format}.
      * <p>
      * Note that if an initial variables map inVars is provided, its contents will
@@ -230,94 +67,97 @@ public final class Replacers {
      * @return
      */
     private static List<Replacer> generateReplacers(
-		List<String> tags,
-		MemberAccessor<Object, String, Object> maccess, 
-		MemberUpdater<Object, String, Object> mupdate, 
-		Map<String, Object> inVars
-	) {
+            List<String> tags,
+            MemberAccessor<Object, String, Object> maccess,
+            MemberUpdater<Object, String, Object> mupdate,
+            Map<String, Object> inVars) {
 
         // If no variable map is provided, we make our own
-		final Map<String, Object> vars = inVars == null ? new HashMap<>() : inVars;
-		final List<Replacer> replacers = new LinkedList<>();
+        final Map<String, Object> vars = inVars == null ? new HashMap<>() : inVars;
+        final List<Replacer> replacers = new LinkedList<>();
 
-		for (String tag : tags) {
-			String prog;
+        for (String tag : tags) {
+            String prog;
 
             // Tags must start with << or <<< and end with >> or >>> respectively
-			if (tag.startsWith("<<<") && tag.endsWith(">>>")) {
-				prog = tag.substring(3, tag.length() - 3);
-			}
-			else if (tag.startsWith("<<") && tag.endsWith(">>")) {
-				prog = tag.substring(2, tag.length() - 2);
-			}
-			else {
-				throw new IllegalArgumentException("Tag should start and end with double or triple angle brackets (<>)." 
-				+ "\nInstead it looks like: " + tag);
-			}
+            if (tag.startsWith("<<<") && tag.endsWith(">>>")) {
+                prog = tag.substring(3, tag.length() - 3);
+            } else if (tag.startsWith("<<") && tag.endsWith(">>")) {
+                prog = tag.substring(2, tag.length() - 2);
+            } else {
+                throw new IllegalArgumentException("Tag should start and end with double or triple angle brackets (<>)."
+                        + "\nInstead it looks like: " + tag);
+            }
 
             // Find a colon for the format specifier
-			final int colon = prog.lastIndexOf(':');
-			final int quote = Math.max(prog.lastIndexOf('\"'), prog.lastIndexOf('\''));
-			String spec;
-			if (colon != -1 && quote < colon) {
-				spec = prog.substring(colon + 1, prog.length()).strip();
-				prog = prog.substring(0, colon);
-			}
-			else {
-				spec = null;
-			}
+            final int colon = prog.lastIndexOf(':');
+            final int quote = Math.max(prog.lastIndexOf('\"'), prog.lastIndexOf('\''));
+            String spec;
+            if (colon != -1 && quote < colon) {
+                spec = prog.substring(colon + 1, prog.length()).strip();
+                prog = prog.substring(0, colon);
+            } else {
+                spec = null;
+            }
 
-			final Interpreter interpreter = new Interpreter(prog, vars);
-			interpreter.setMemberAccessCallback(maccess);
-			interpreter.setMemberUpdateCallback(mupdate);
+            final Interpreter interpreter = new Interpreter(prog, vars);
+            interpreter.setMemberAccessCallback(maccess);
+            interpreter.setMemberUpdateCallback(mupdate);
 
-			try {
+            try {
                 // Core of the Reporter module, where the magic happens.
-				final Object output = interpreter.interpret();
-				replacers.add(Replacer.of(tag, output == null ? "" : format(output, spec)));
-			}
-			catch (Exception e) {
-				report(e, prog);
-			}
+                final Object output = interpreter.interpret();
+                replacers.add(Replacer.of(tag, output == null ? "" : format(output, spec)));
+            } catch (Exception e) {
+                report(e, prog);
+            }
 
-			// Update our variables so we can have persistance across tag executions.
-			vars.putAll(interpreter.getGlobalScopeVariables());
-		}
+            // Update our variables so we can have persistance across tag executions.
+            vars.putAll(interpreter.getGlobalScopeVariables());
+        }
 
         return replacers;
     }
 
     // Log errors to the console
-	static void report(Exception e, String program) {
-		StringWriter sw = new StringWriter();
-		e.printStackTrace(new PrintWriter(sw));
+    static void report(Exception e, String program) {
+        StringWriter sw = new StringWriter();
+        e.printStackTrace(new PrintWriter(sw));
 
-		System.err.println(new StringBuilder("Something went wrong processing the following program:")
-			.append("\n").append(program).append("\n").append("Error Details:\n")
-			.append(String.format("Type: %s \n", e.getClass().getSimpleName()))
-			.append(String.format("Message: %s \n", e.getMessage()))
-			.append(String.format("Stack Trace: %s \n", sw.toString())).toString());
-	}
+        System.err.println(new StringBuilder("Something went wrong processing the following program:")
+                .append("\n").append(program).append("\n").append("Error Details:\n")
+                .append(String.format("Type: %s \n", e.getClass().getSimpleName()))
+                .append(String.format("Message: %s \n", e.getMessage()))
+                .append(String.format("Stack Trace: %s \n", sw.toString())).toString());
+    }
 
     // TODO: document the format spec
- 	private static String format(Object thing, String spec) {
+    private static String format(Object thing, String spec) {
 
-		if (thing instanceof BigDecimal) return format(((BigDecimal) thing).doubleValue(), spec);
-		else if (spec == null) return String.valueOf(thing);
-		else if (spec.contains("%")) return String.format(spec, thing);
-		else switch (spec) {
-			case "short_date":
-			case "sdate": return SHORT_DATE_FMT.format(thing);
-			case "currency":
-			case "curr": return format(thing, "£ %,.2f");
+        if (thing instanceof BigDecimal)
+            return format(((BigDecimal) thing).doubleValue(), spec);
+        else if (spec == null)
+            return String.valueOf(thing);
+        else if (spec.contains("%"))
+            return String.format(spec, thing);
+        else
+            switch (spec) {
+                case "short_date":
+                case "sdate":
+                    return SHORT_DATE_FMT.format(thing);
+                case "currency":
+                case "curr":
+                    return format(thing, "£ %,.2f");
 
-			// Legacy stuff. I want to phase it out someday.
-			case "currp": return String.format("%s p", NumberFormat.getInstance().format((Double) thing * 100));
-			case "currpx": return String.format("%s p", NumberFormat.getInstance().format((Double) thing));
-			default: throw new IllegalArgumentException("Unrecognised format spec: " + spec);
-		}
-	}
-
+                // Legacy stuff. I want to phase it out someday.
+                case "currp":
+                    return String.format("%s p", NumberFormat.getInstance().format((Double) thing * 100));
+                case "currpx":
+                    return String.format("%s p", NumberFormat.getInstance().format((Double) thing));
+                default:
+                    throw new IllegalArgumentException("Unrecognised format spec: " + spec);
+            }
+    }
 
     /**
      * Traverse through the body elements of the specified document and apply every
@@ -435,7 +275,8 @@ public final class Replacers {
      * and/or lines. If the entire tag exists in a single run it could be anywhere
      * within the text of a run.
      * <p>
-     * <b>DISCLAIMER</b>: This function is designed to work with Replacers that have been
+     * <b>DISCLAIMER</b>: This function is designed to work with Replacers that have
+     * been
      * generated by
      * {@link Extractor#generateReplacers(XWPFDocument, Claim, IContext)
      * Extractor.generateReplacers}, otherwise, it might produce unexpected results.
@@ -510,7 +351,6 @@ public final class Replacers {
             // Find how many characters in the run match the tag
             // This loop runs until the characters in either run or tag are depleted
             for (i = 0; i < arun.length && s < atag.length; s = atag[s] == arun[i++] ? s + 1 : 0);
-            
 
             // If we have matched one or more characters, we mark this position as start
             if (s != 0) {

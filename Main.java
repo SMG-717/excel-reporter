@@ -56,7 +56,7 @@ import com.forenzix.word.Replacers;
  */
 public class Main {
 
-    public static final String VERSION = "1.3";
+    public static final String VERSION = "1.4";
     public static final String ANSI_RESET = "\u001B[0m",
             ANSI_BLACK = "\u001B[30m",
             ANSI_RED = "\u001B[31m",
@@ -318,7 +318,12 @@ public class Main {
 
                 // I'll get rid of the warning. Eventually... -SMG
                 @SuppressWarnings("unchecked")
-                final Map<String, XSSFCell> sheet = (((Pair<Sheet, HashMap<String, XSSFCell>>) vars.get(sname))).value;
+                final Pair<Sheet, HashMap<String, XSSFCell>> vsheet = (Pair<Sheet, HashMap<String, XSSFCell>>) vars.get(sname);
+                if (vsheet == null) {
+                    continue;
+                }
+
+                final Map<String, XSSFCell> sheet = vsheet.value;
                 final XSSFCell cell = workbook.getSheet(sname).getRow(row).getCell(col);
 
                 vars.put(name, vars.containsKey(name) ? DUPLICATE_NAME : cell);
@@ -561,9 +566,13 @@ class ReporterInstance implements Callable<Void> {
             Main.produceReport(wb, out, docfile, singleReport);
             System.out.println(Main.ANSI_GREEN + "Report '%s' generated successfully.".formatted(out) + Main.ANSI_RESET);
         }
-        catch (IOException e) {
+        catch (Exception e) {
             if (!singleReport) System.out.println(Main.ANSI_RED + "Report '%s' failed. Run independently to get more details.".formatted(out) + Main.ANSI_RESET);
-            else e.printStackTrace();
+            else {
+                System.out.println(Main.ANSI_RED);
+                e.printStackTrace();
+                System.out.println(Main.ANSI_RESET);
+            }
         }
         return null;
     }
